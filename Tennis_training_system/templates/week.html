@@ -1,0 +1,60 @@
+{% extends 'calendarLiMi/baseCalendar.html' %}
+{% load static %}
+{% block head %}
+    <title>Week by Limi</title>
+    <link href="{% static 'fontawesomefree/css/fontawesome.css' %}" rel="stylesheet" type="text/css">
+    <link href="{% static 'fontawesomefree/css/solid.css' %}" rel="stylesheet" type="text/css">
+{% endblock %}
+{% block day %}
+<main>
+    <header>
+        <nav class="date-nav" id="date-nav-week">
+            <div class="change-date" id="change-date-week">
+                <div class="nav-arrows prev-week-btn"><i class="fa-solid fa-chevron-left"></i></div>
+                <div class="week week-with-dates"></div>
+                <div class="nav-arrows next-week-btn"><i class="fa-solid fa-chevron-right"></i></div>
+            </div>
+        </nav>
+        <div class="date-nav-days-of-the-week-container">
+            <div class="days-of-the-week" id="week-view-days-of-the-week">
+                <div class="day-of-the-week">Sunday</div>
+                <div class="day-of-the-week">Monday</div>
+                <div class="day-of-the-week">Tuesday</div>
+                <div class="day-of-the-week">Wednesday</div>
+                <div class="day-of-the-week">Thursday</div>
+                <div class="day-of-the-week">Friday</div>
+                <div class="day-of-the-week">Saturday</div>
+            </div>
+        </div>
+    </header>
+    <section class="calendar-with-timeline-container week">
+        <div class="timeline">
+        </div>
+        <div class="calendar-container">
+            <div class="week-grid-tiles">
+                <div class="monday-grid-tiles weekday-grid">
+                </div>
+                <div class="tuesday-grid-tiles weekday-grid">
+                </div>
+                <div class="wednesday-grid-tiles weekday-grid">
+                </div>
+                <div class="thursday-grid-tiles weekday-grid">
+                </div>
+                <div class="friday-grid-tiles weekday-grid">
+                </div>
+                <div class="saturday-grid-tiles weekday-grid">
+                </div>
+                <div class="sunday-grid-tiles weekday-grid">
+                </div>
+            </div>
+        </div>
+    </section>
+    {% block day-week-nav %}
+        <div class="views-nav">
+            <a href="/calendarLiMi/day" class="day-week-nav">Day</a>
+            <a href="/calendarLiMi/week" class="day-week-nav active-view">Week</a>
+        </div>
+    {% endblock %}
+</main>
+<script src="{% static 'JS/week.js' %}"></script>
+{% endblock %}

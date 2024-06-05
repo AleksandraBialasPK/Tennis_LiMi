@@ -1,0 +1,36 @@
+{% extends 'baseCalendar.html' %}
+{% load static %}
+{% block head %}
+    <title>Day by Limi</title>
+    <link href="{% static 'fontawesomefree/css/fontawesome.css' %}" rel="stylesheet" type="text/css">
+    <link href="{% static 'fontawesomefree/css/solid.css' %}" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block day %}
+    <main>
+    <header>
+        <nav class="date-nav" id="date-nav-day">
+            <div class="change-date" id="change-date-day">
+                <div class="nav-arrows prev-day-btn"><i class="fa-solid fa-chevron-left"></i></div>
+                <div class="day-with-date day"></div>
+                <div class="nav-arrows next-day-btn"><i class="fa-solid fa-chevron-right"></i></div>
+            </div>
+        </nav>
+    </header>
+    <section class="calendar-with-timeline-container day">
+        <div class="timeline">
+        </div>
+        <div class="day-grid-tile-container">
+        </div>
+        <div class="event-container">
+        </div>
+    </section>
+    {% block day-week-nav %}
+        <div class="views-nav">
+            <a href="day" class="day-week-nav active-view">Day</a>
+            <a href="week" class="day-week-nav">Week</a>
+        </div>
+    {% endblock %}
+</main>
+<script src="{% static 'JS/day.js' %}"></script>
+{% endblock %}

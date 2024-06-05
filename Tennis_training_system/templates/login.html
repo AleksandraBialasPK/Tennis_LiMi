@@ -1,0 +1,48 @@
+{% extends 'baseLoginLogout.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block head %}
+    <title>Welcome to LiMi</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
+{% endblock %}
+
+{% block loginLogout-left-side %}
+    <form method="POST">
+    {% csrf_token %}
+        <div class="login-form-container">
+            <div class="input-container input-container">
+                <i class="fas fa-user"></i>
+                {{ form.username|add_class:"login-input" }} 
+            </div>
+            <div class="input-container input-container">
+                <i class="fas fa-key"></i>
+                {{ form.password|add_class:"login-input" }}
+            </div>
+        </div>
+        <div class="login-button-container">
+            <button type="submit">Sign In</button>
+            <a href="{% url 'register' %}" class="login-or-sign-up">Sign up</a>
+        </div>
+    </form>
+    <script>
+		var form_fields = document.getElementsByTagName('input')
+		form_fields[1].placeholder='Email';
+		form_fields[2].placeholder='Password';
+
+		for (var field in form_fields){
+			form_fields[field].className += ' form-control'
+		}
+	</script>
+    {% if messages %}
+        <ul class="messages">
+        {% for message in messages %}
+            <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
+
+{% block loginLogout-right-side %}
+    <img id="dogs-image" src="{% static 'BeFunky-collage.jpg' %}" alt="Happy Shih Tzu (dog)">
+{% endblock %}

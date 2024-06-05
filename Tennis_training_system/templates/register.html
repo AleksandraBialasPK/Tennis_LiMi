@@ -1,0 +1,64 @@
+{% extends 'baseLoginLogout.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block head %}
+    <title>Welcome to LiMi - Register!</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
+{% endblock %}
+
+{% block loginLogout-left-side %}
+    {% if form.errors %}
+        {% for field in form %}
+            <ul class="messages">
+            {% for message in field.errors %}
+                <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <ul class="messages">
+            {% for message in field.errors %}
+                <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endfor %}
+    {% endif %}
+
+    <form class="login-form-container" method="POST">
+        {% csrf_token %}
+        <div class="login-input input-container">
+            <i class="fas fa-user"></i>
+            {{ form.username|add_class:"login-input" }}
+        </div>
+        <div class="login-input input-container">
+            <i class="fas fa-envelope-square"></i>
+            {{ form.email|add_class:"login-input" }}
+        </div>
+        <div class="login-input input-container">
+            <i class="fas fa-key"></i>
+           {{ form.password1|add_class:"login-input" }}
+        </div>
+        <div class="login-input input-container">
+            <i class="fas fa-key"></i>
+            {{ form.password2|add_class:"login-input" }}
+        </div>
+        <button type="submit">Register</button>
+    </form>
+    <script>
+		var form_fields = document.getElementsByTagName('input')
+		form_fields[1].placeholder='Username';
+		form_fields[1].placeholder='Username';
+		form_fields[2].placeholder='Email';
+		form_fields[3].placeholder='Password';
+		form_fields[4].placeholder='Password confirmation';
+
+		for (var field in form_fields){
+			form_fields[field].className += ' form-control'
+		}
+	</script>
+    <a href="{% url 'login' %}" class="login-or-sign-up">Log In</a>
+{% endblock %}
+{% block loginLogout-right-side %}
+    <img  id="dogs-image" src="{% static 'BeFunky-collage.jpg' %}" alt="Happy Shih Tzu (dog)">
+{% endblock %}
