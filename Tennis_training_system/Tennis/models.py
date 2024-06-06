@@ -1,10 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db.models.signals import post_migrate
+import logging
+logger = logging.getLogger(__name__)
 
 # Role choices
 ROLE_CHOICES = [
-    ('regular', 'Regular'),
-    ('admin', 'Admin'),
+    ('regular', 'regular'),
+    ('admin', 'admin'),
 ]
 
 # Status choices for CreateGameRequest and ParticipantRequest
@@ -42,34 +45,10 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         extra_fields.setdefault('is_active', True)
 
-        if 'role' not in extra_fields:
-            default_role = Role.objects.get_or_create(role_name='regular')[0]
-            extra_fields['role'] = default_role
-
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
-
-    def create_superuser(self, email, password=None, **extra_fields):
-        """
-        Create and return a superuser with an email and password.
-        """
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
-
-        # Assign default role if not specified
-        if 'role' not in extra_fields:
-            default_role = Role.objects.get_or_create(role_name='admin')[0]  # Assign 'admin' role to superuser
-            extra_fields['role'] = default_role
-
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-
-        return self.create_user(email, password, **extra_fields)
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -79,7 +58,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     password = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     profile_picture = models.CharField(max_length=255, null=True, blank=True)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, default=Role.objects.filter(role_name='regular'))
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

@@ -9,8 +9,9 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
+import os
 from pathlib import Path
+import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -131,3 +132,35 @@ STATICFILES_DIRS = [BASE_DIR / "Tennis/static"]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ADMIN_URL = 'admin/'
+
+# Configure logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'django.log'),
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+        },
+        'Tennis': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+        },
+    },
+    "": {
+        'handlers': ['file'],
+        'level': 'DEBUG',
+        "propagate": True,
+    },
+    'Tennis_training_system': {
+        'handlers': ['file'],
+        'level': 'DEBUG',
+    },
+}
