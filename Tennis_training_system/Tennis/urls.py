@@ -6,6 +6,6 @@ urlpatterns = [
     path('', views.CustomLoginView.as_view(), name='login'),
     path('register/', views.RegisterView.as_view(), name='register'),
     path('logout/', logout_then_login, name='logout'),
-    path('day/', views.day, name='day'),
-    path('week/', views.week, name='week'),
+    path('day/', views.DayView.as_view(), name='day'),
+    path('week/', views.WeekView.as_view(), name='week'),
 ]

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Tennis.apps.TennisConfig',
     'widget_tweaks',
+    'fontawesomefree',
 ]
 
 MIDDLEWARE = [

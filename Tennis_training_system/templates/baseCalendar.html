@@ -67,13 +67,10 @@
         <div>
             <button class="not-enhanced-buttons">Settings</button>
         </div>
-{#        <a href="{% url 'logout' %}">#}
-{#            <button class="not-enhanced-buttons">Log out</button>#}
-{#        </a>#}
         <form action="{% url 'logout' %}" method="post">
-    {% csrf_token %}
-    <button type="submit" class="not-enhanced-buttons">Log out</button>
-</form>
+            {% csrf_token %}
+            <button type="submit" class="not-enhanced-buttons">Log out</button>
+        </form>
     </div>
 </section>
     {% block day %}
