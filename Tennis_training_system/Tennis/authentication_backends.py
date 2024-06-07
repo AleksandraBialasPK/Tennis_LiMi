@@ -1,6 +1,7 @@
 from django.contrib.auth.backends import ModelBackend
 from .models import CustomUser
 
+
 class EmailBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
         try:
@@ -15,3 +16,4 @@ class EmailBackend(ModelBackend):
             return CustomUser.objects.get(pk=user_id)
         except CustomUser.DoesNotExist:
             return None
+

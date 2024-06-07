@@ -133,6 +133,9 @@ STATICFILES_DIRS = [BASE_DIR / "Tennis/static"]
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ADMIN_URL = 'admin/'
 
+LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = '/'
+
 # Configure logging
 LOGGING = {
     'version': 1,

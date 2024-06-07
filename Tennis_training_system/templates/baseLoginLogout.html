@@ -1,20 +1,17 @@
+
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="pl">
-<head>
-   <meta charset="UTF-8">
-    <link rel="stylesheet" href="{% static 'calendarLiMiLoginLogout.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% block head %}
-    {% endblock %}
-</head>
+
+{% block head %}
+{% endblock %}
+
 <body>
     <div class="login-left-side">
-    <img class="logo" src="{% static 'logo-no-background.svg' %}" alt="LiMi logo">
-    {% block loginLogout-left-side %}
-    {% endblock %}
+        <img class="logo" src="{% static 'logo-no-background.svg' %}" alt="LiMi logo">
+        {% block loginLogout-left-side %}
+        {% endblock %}
     </div>
     <div class="login-right-side">
          {% block loginLogout-right-side %}
@@ -22,3 +19,4 @@
     </div>
 </body>
 </html>
+

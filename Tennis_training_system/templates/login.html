@@ -4,18 +4,24 @@
 
 {% block head %}
     <title>Welcome to LiMi</title>
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'calendarLiMiLoginLogout.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" 
+          integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
 {% endblock %}
 
 {% block loginLogout-left-side %}
     <form method="POST">
-    {% csrf_token %}
+        {% csrf_token %}
         <div class="login-form-container">
-            <div class="input-container input-container">
+            <div class="input-container">
                 <i class="fas fa-user"></i>
                 {{ form.username|add_class:"login-input" }} 
             </div>
-            <div class="input-container input-container">
+            <div class="input-container">
                 <i class="fas fa-key"></i>
                 {{ form.password|add_class:"login-input" }}
             </div>
@@ -25,19 +31,10 @@
             <a href="{% url 'register' %}" class="login-or-sign-up">Sign up</a>
         </div>
     </form>
-    <script>
-		var form_fields = document.getElementsByTagName('input')
-		form_fields[1].placeholder='Email';
-		form_fields[2].placeholder='Password';
-
-		for (var field in form_fields){
-			form_fields[field].className += ' form-control'
-		}
-	</script>
     {% if messages %}
         <ul class="messages">
         {% for message in messages %}
-            <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            <li class="{{ message.tags }}">{{ message }}</li>
         {% endfor %}
         </ul>
     {% endif %}
