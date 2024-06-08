@@ -1,15 +1,13 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.views import LogoutView as BaseLogoutView
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from .forms import CustomUserCreationForm
-from django.views.generic import FormView, TemplateView
+from django.views.generic import FormView, TemplateView, CreateView
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.utils.translation import gettext_lazy as _
-from .forms import EmailAuthenticationForm
-from django.views.generic import ListView
+from .forms import EmailAuthenticationForm,  GameForm
 from .models import Game
 from datetime import datetime, date
 from django.views.generic import ListView
@@ -44,29 +42,6 @@ class CustomLoginView(LoginView):
             return self.form_invalid(form)
 
 
-# class DayView(ListView):
-#     model = Game
-#     template_name = 'day.html'  # Szablon HTML dla widoku dnia
-#
-#     def get_queryset(self):
-#         day_date_param = self.kwargs.get('day_date')
-#         if day_date_param:
-#             day_date = datetime.strptime(day_date_param, '%Y-%m-%d').date()
-#             return Game.objects.filter(start_date_and_time__date=day_date)
-#         else:
-#             today = date.today()
-#             return Game.objects.filter(start_date_and_time__date=today)
-#
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         day_date_param = self.kwargs.get('day_date')
-#         if day_date_param:
-#             context['day_date'] = day_date_param
-#         else:
-#             context['day_date'] = date.today().strftime('%Y-%m-%d')
-#         return context
-
-
 class DayView(ListView):
     model = Game
     template_name = 'day.html'  # Nazwa szablonu HTML dla listy wydarzeń
@@ -78,6 +53,20 @@ class DayView(ListView):
         context = super().get_context_data(**kwargs)
         context['events'] = self.get_queryset()  # Przekazujemy listę wydarzeń do kontekstu szablonu
         return context
+
+
+class CreateEventView(CreateView):
+    model = Game
+    form_class = GameForm
+    template_name = 'day.html'
+    success_url = reverse_lazy('day')
+
+    def form_valid(self, form):
+        event = form.save(commit=False)
+        event.creator = self.request.user
+        event.save()
+        return super().form_valid(form)
+
 
 
 class WeekView(LoginRequiredMixin, TemplateView):
