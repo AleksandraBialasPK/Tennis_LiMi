@@ -9,72 +9,63 @@
           content="IE=edge">
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.svg' %}" >
     {% block head %}
     {% endblock %}
 </head>
 <body>
-<section class="sidebar-nav">
-    <div class="navigation">
-        <form class="new-event-form" id="form" method="POST" action="/addEvent">
-            <div class="user-add-event">
-                <div class="user-icon-add-event"><img src="{% static 'avatars/Ola.png' %}"></div>
-                <div>Ola</div>
-            </div>
-            <div class="add-event-form-divs">
-                <label for="category-form">Category: </label>
-                <select name="category" id="category-form">
-                    <option value="training" class="sports">Training</option>
-                    <option value="friendly-game" class="social">Friendly Match</option>
-                </select>
-            </div>
-            <div class="add-event-form-divs">
-                <label for="event-date-form">Event date: </label>
-                <input type="date" id="event-date-form" name="date" required/>
-            </div>
-            <div class="add-event-form-divs">
-                <label for="start-time-form">Start time: </label>
-                <input type="time" id="start-time-form" name="startTime" required>
-            </div>
-            <div class="add-event-form-divs">
-                <label for="end-time-form">End time: </label>
-                <input type="time" id="end-time-form" name="endTime" required>
-            </div>
-            <div class="add-event-form-divs">
-                <label for="location-form">Location: </label>
-                <input type="text" id="location-form" name="location" required>
-            </div>
-            <div class="add-event-form-divs"><button id="btn-add-new-event" type="submit">Add a new game!</button></div>
-        </form>
-        <button class="create-new-event" id="create-new-event-button">Add a new game</button>
-        <div class="events">
-            <label for="Training"><input type="checkbox" class="checkbox-event sports" id="Training" name="Training" checked>Training</label>
-            <label for="Friendly Match"><input type="checkbox" class="checkbox-event social" id="Friendly Match" name="Friendly Match" checked>Friendly Match</label>
-        </div>
-        {% block day-week-nav %}
-        {% endblock %}
-    </div>
-    <div class="settings-and-logout">
-        <div class="events">
-            <div class="person" id="person_1">
-                <div class="avatar">
-                    <img src="{% static 'avatars/Ola.png' %}" alt="Ola picture">
-                </div>
-                <div class="nickname">
-                    <span class="name">{{ request.user }}</span>
-                </div>
-            </div>
-        </div>
-        <div>
-            <button class="not-enhanced-buttons">Settings</button>
-        </div>
-        <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="not-enhanced-buttons">Log out</button>
-        </form>
-    </div>
-</section>
     {% block day %}
     {% endblock %}
+    <form class="new-event-form" id="form" method="POST" action="{% url 'add_event' %}">
+        {% csrf_token %}
+        {% if form %}
+            {% for field in form %}
+                <div class="add-event-form-divs">
+                    {{ field.label_tag }} {{ field }}
+                    {% if field.help_text %}
+                        <span class="help-text">{{ field.help_text }}</span>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Formularz nie został przekazany.</p>
+        {% endif %}
+        <button>Add</button>
+    </form>
+    
+    <section class="sidebar-nav">
+        <div class="navigation">
+            <button class="create-new-event" id="create-new-event-button">Create new event</button>
+            <div class="events">
+                <label for="Training"><input type="checkbox" class="checkbox-event sports" id="Training" name="Training" checked>Training</label>
+                <label for="Friendly Match"><input type="checkbox" class="checkbox-event social" id="Friendly Match" name="Friendly Match" checked>Friendly Match</label>
+            </div>
+            {% block day-week-nav %}
+            {% endblock %}
+        </div>
+        <div class="settings-and-logout">
+            <div class="events">
+                <div class="person" id="person_1">
+                    <div class="avatar">
+                        <img src="{% static 'avatars/Ola.png' %}" alt="Ola picture">
+                    </div>
+                </div>
+                 <div class="nickname">
+                     <span class="name">{{ request.user.username }}</span>
+                 </div>
+            </div>
+            <div>
+                <button class="not-enhanced-buttons">Settings</button>
+            </div>
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="not-enhanced-buttons">Log out</button>
+            </form>
+        </div>
+    </section>
 </body>
 <script src="{% static 'JS/createNewEvent.js' %}"></script>
 </html>

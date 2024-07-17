@@ -7,6 +7,7 @@ urlpatterns = [
     path('register/', views.RegisterView.as_view(), name='register'),
     path('logout/', logout_then_login, name='logout'),
     path('day/', views.DayView.as_view(), name='day'),
-    path('addEvent/', views.CreateEventView.as_view(), name='create_event'),
+    path('add_event/', views.CreateEventView.as_view(), name='add_event'),
     path('week/', views.WeekView.as_view(), name='week'),
+    # path('getEventsForDay/', views.GetEventsForDayView.as_view(), name='get_events_for_day'),
 ]

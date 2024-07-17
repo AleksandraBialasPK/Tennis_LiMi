@@ -6,10 +6,24 @@ from django import forms
 from .models import Game
 
 
+class DateTimeLocalInput(forms.DateTimeInput):
+    input_type = 'datetime-local'
+
+
 class GameForm(forms.ModelForm):
     class Meta:
         model = Game
         fields = ['category', 'start_date_and_time', 'end_date_and_time', 'court']
+        widgets = {
+            'start_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'end_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.all(),
+        empty_label="Select a category",
+        label="Category"
+    )
 
 
 class CustomUserCreationForm(UserCreationForm):

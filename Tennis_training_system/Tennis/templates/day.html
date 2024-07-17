@@ -3,6 +3,14 @@
 
 {% block head %}
     <title>Day by Limi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block day-week-nav %}
+    <div class="views-nav">
+        <a href="day" class="day-week-nav active-view">Day</a>
+        <a href="week" class="day-week-nav">Week</a>
+    </div>
 {% endblock %}
 
 {% block day %}
@@ -36,12 +44,6 @@
             {% endif %}
         </div>
     </section>
-    {% block day-week-nav %}
-        <div class="views-nav">
-            <a href="day" class="day-week-nav active-view">Day</a>
-            <a href="week" class="day-week-nav">Week</a>
-        </div>
-    {% endblock %}
 </main>
     <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
     <script src="{% static 'JS/day.js' %}"></script>

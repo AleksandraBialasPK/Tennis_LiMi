@@ -136,6 +136,7 @@ ADMIN_URL = 'admin/'
 
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/'
+LOGIN_REDIRECT_URL = 'day/'
 
 # Configure logging
 LOGGING = {
