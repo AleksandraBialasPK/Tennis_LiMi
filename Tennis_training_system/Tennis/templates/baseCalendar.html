@@ -10,12 +10,23 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" type="image/png" href="{% static 'favicon.svg' %}" >
+    <title>Create Game</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">
+    <script src="{% static 'django_select2/django_select2.js' %}"></script>
     {% block head %}
     {% endblock %}
 </head>
 <body>
     {% block day %}
     {% endblock %}
+        <style>
+        .select2-search__field {
+            width: 100% !important;
+        }
+    </style>
     <form class="new-event-form" id="form" method="POST" action="{% url 'add_event' %}">
         {% csrf_token %}
         {% if form %}
@@ -35,10 +46,17 @@
         {% endif %}
         <button>Add</button>
     </form>
+        <script>
+        (function($) {
+            $(document).ready(function() {
+                $('.django-select2').djangoSelect2();
+            });
+        })(jQuery);
+    </script>
     
     <section class="sidebar-nav">
         <div class="navigation">
-            <button class="create-new-event" id="create-new-event-button">Create new event</button>
+            <button class="create-new-event" id="create-new-event-button">Add new game</button>
             <div class="events">
                 <label for="Training"><input type="checkbox" class="checkbox-event sports" id="Training" name="Training" checked>Training</label>
                 <label for="Friendly Match"><input type="checkbox" class="checkbox-event social" id="Friendly Match" name="Friendly Match" checked>Friendly Match</label>

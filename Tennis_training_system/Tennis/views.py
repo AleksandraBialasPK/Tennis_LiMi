@@ -1,25 +1,25 @@
-import json
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.shortcuts import render, redirect
+
+from Tennis_training_system import settings
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.utils.translation import gettext_lazy as _
 from .forms import EmailAuthenticationForm,  GameForm
-from .models import Game
-from datetime import datetime, date
 from django.views.generic import FormView, ListView, TemplateView, CreateView, View
-from django.http import JsonResponse
-from .models import Game
-from django.views.decorators.csrf import csrf_exempt
+from .models import Game, Participant, Category
+from django.core.mail import send_mail, EmailMessage
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 
 class RegisterView(FormView):
     template_name = 'register.html'
     form_class = CustomUserCreationForm
-    success_url = reverse_lazy('day')
+    success_url = reverse_lazy('login')
 
     def form_valid(self, form):
         user = form.save()

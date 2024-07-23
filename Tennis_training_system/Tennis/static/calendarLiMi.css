@@ -243,6 +243,11 @@ header > nav {
     justify-content: center;
 }
 
+.django-select2 {
+    width: 100%;
+    max-width: 100%;
+}
+
 button {
     box-sizing: border-box;
     width: 80px;

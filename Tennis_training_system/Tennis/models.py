@@ -34,6 +34,10 @@ class Role(models.Model):
     def __str__(self):
         return self.role_name
 
+    @classmethod
+    def get_default_role(cls):
+        return cls.objects.get_or_create(role_name='regular')[0]
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -50,6 +54,20 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
+    def create_superuser(self, email, password=None, **extra_fields):
+        """
+        Create and return a superuser with an email and password.
+        """
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(email, password, **extra_fields)
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     user_id = models.AutoField(primary_key=True)
@@ -58,7 +76,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     password = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     profile_picture = models.CharField(max_length=255, null=True, blank=True)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, default=Role.objects.filter(role_name='regular'))
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, default=Role.get_default_role)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
@@ -106,6 +124,7 @@ class RecurringGroup(models.Model):
 
 class Game(models.Model):
     game_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=20, unique=True, default='Tennis game')
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     court = models.ForeignKey(Court, on_delete=models.CASCADE)
     creator = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
