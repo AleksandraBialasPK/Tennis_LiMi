@@ -48,10 +48,22 @@ class GameForm(forms.ModelForm):
     )
 
 
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ['name']
+
+
+class CourtForm(forms.ModelForm):
+    class Meta:
+        model = Court
+        fields = ['name', 'building_number', 'street', 'postal_code', 'city', 'country']
+
+
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = CustomUser
-        fields = ('email', 'username', 'password1', 'password2')
+        fields = ['email', 'username', 'password1', 'password2']
 
 
 class EmailAuthenticationForm(AuthenticationForm):

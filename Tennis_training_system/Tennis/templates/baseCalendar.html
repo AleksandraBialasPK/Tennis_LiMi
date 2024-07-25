@@ -27,10 +27,10 @@
             width: 100% !important;
         }
     </style>
-    <form class="new-event-form" id="form" method="POST" action="{% url 'add_event' %}">
+    <form class="new-event-form" id="game_form" method="POST" >
         {% csrf_token %}
-        {% if form %}
-            {% for field in form %}
+        {% if game_form %}
+            {% for field in game_form %}
                 <div class="add-event-form-divs">
                     {{ field.label_tag }} {{ field }}
                     {% if field.help_text %}
@@ -64,6 +64,9 @@
             {% block day-week-nav %}
             {% endblock %}
         </div>
+{#        <button class="create-new-event" id="create-new-event-button">Add new game</button>#}
+{#        {% block add_court %}#}
+{#        {% endblock %}#}
         <div class="settings-and-logout">
             <div class="events">
                 <div class="person" id="person_1">
