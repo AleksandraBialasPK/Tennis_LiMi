@@ -27,7 +27,7 @@
             width: 100% !important;
         }
     </style>
-    <form class="new-event-form" id="game_form" method="POST" >
+    <form class="new-event-form" id="game_form" method="POST">
         {% csrf_token %}
         {% if game_form %}
             {% for field in game_form %}
@@ -56,7 +56,9 @@
     
     <section class="sidebar-nav">
         <div class="navigation">
-            <button class="create-new-event" id="create-new-event-button">Add new game</button>
+            <button class="create-new-event" id="create-new-event-button">Add a new game</button>
+            <button class="create-new-event" id="add-new-court-button">Add a new court</button>
+            <button class="create-new-event" id="create-new-category-button">Add a new category</button>
             <div class="events">
                 <label for="Training"><input type="checkbox" class="checkbox-event sports" id="Training" name="Training" checked>Training</label>
                 <label for="Friendly Match"><input type="checkbox" class="checkbox-event social" id="Friendly Match" name="Friendly Match" checked>Friendly Match</label>
@@ -64,9 +66,19 @@
             {% block day-week-nav %}
             {% endblock %}
         </div>
-{#        <button class="create-new-event" id="create-new-event-button">Add new game</button>#}
-{#        {% block add_court %}#}
-{#        {% endblock %}#}
+        {% if request.user.is_staff %}
+            <h3>Hello Admin</h3>
+            <form class="new-event-form" id="court_form" method="POST">
+                {% csrf_token %}
+                {{ court_form.as_p }}
+                <button type="submit" name="submit_court">Add Court</button>
+            </form>
+            <form class="new-event-form" id="category_form" method="POST">
+                {% csrf_token %}
+                {{ category_form.as_p }}
+                <button type="submit" name="submit_category">Add Category</button>
+            </form>
+        {% endif %}
         <div class="settings-and-logout">
             <div class="events">
                 <div class="person" id="person_1">
