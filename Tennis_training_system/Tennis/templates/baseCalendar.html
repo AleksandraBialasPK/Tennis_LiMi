@@ -3,30 +3,28 @@
 <html lang="pl">
 
 <head>
-   <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <link rel="stylesheet" href="{% static 'calendarLiMi.css' %}">
-    <meta http-equiv="X-UA-Compatible"
-          content="IE=edge">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.svg' %}" >
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.svg' %}">
     <title>Create Game</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">
     <script src="{% static 'django_select2/django_select2.js' %}"></script>
+    <style>
+        .select2-search__field {
+            width: 100% !important;
+        }
+    </style>
     {% block head %}
     {% endblock %}
 </head>
 <body>
     {% block day %}
     {% endblock %}
-        <style>
-        .select2-search__field {
-            width: 100% !important;
-        }
-    </style>
     <form class="new-event-form" id="game_form" method="POST">
         {% csrf_token %}
         {% if game_form %}
@@ -44,21 +42,21 @@
         {% else %}
             <p>Formularz nie został przekazany.</p>
         {% endif %}
-        <button>Add</button>
+        <button type="submit" name="submit_game">Add</button>
     </form>
-        <script>
+    <script>
         (function($) {
             $(document).ready(function() {
                 $('.django-select2').djangoSelect2();
             });
         })(jQuery);
     </script>
-    
+
     <section class="sidebar-nav">
         <div class="navigation">
-            <button class="create-new-event" id="create-new-event-button">Add a new game</button>
-            <button class="create-new-event" id="add-new-court-button">Add a new court</button>
-            <button class="create-new-event" id="create-new-category-button">Add a new category</button>
+            <button class="create-new-event" id="create-new-event-button" type="button">Add a new game</button>
+            <button class="create-new-event" id="add-new-court-button" type="button">Add a new court</button>
+            <button class="create-new-event" id="create-new-category-button" type="button">Add a new category</button>
             <div class="events">
                 <label for="Training"><input type="checkbox" class="checkbox-event sports" id="Training" name="Training" checked>Training</label>
                 <label for="Friendly Match"><input type="checkbox" class="checkbox-event social" id="Friendly Match" name="Friendly Match" checked>Friendly Match</label>
@@ -86,12 +84,12 @@
                         <img src="{% static 'avatars/Ola.png' %}" alt="Ola picture">
                     </div>
                 </div>
-                 <div class="nickname">
-                     <span class="name">{{ request.user.username }}</span>
-                 </div>
+                <div class="nickname">
+                    <span class="name">{{ request.user.username }}</span>
+                </div>
             </div>
             <div>
-                <button class="not-enhanced-buttons">Settings</button>
+                <button class="not-enhanced-buttons" type="button">Settings</button>
             </div>
             <form action="{% url 'logout' %}" method="post">
                 {% csrf_token %}

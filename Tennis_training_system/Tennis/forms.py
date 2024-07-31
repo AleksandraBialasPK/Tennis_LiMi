@@ -1,9 +1,14 @@
+from urllib import request
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Game, Category, Court, RecurringGroup, RECURRENCE_CHOICES
 from django.contrib.auth.forms import AuthenticationForm
 from django_select2.forms import ModelSelect2MultipleWidget, ModelSelect2Widget
 from django.core.validators import EmailValidator
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DateTimeLocalInput(forms.DateTimeInput):
@@ -18,34 +23,47 @@ class ParticipantsWidget(ModelSelect2MultipleWidget):
 
 
 class GameForm(forms.ModelForm):
+    recurrence_type = forms.ChoiceField(choices=RECURRENCE_CHOICES, required=False, label="Recurrence Type")
+
     class Meta:
         model = Game
-        fields = ['name', 'category', 'start_date_and_time', 'end_date_and_time', 'court', 'participants', 'group']
+        fields = ['name', 'category', 'start_date_and_time', 'end_date_and_time', 'court', 'participants']
         widgets = {
             'start_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
 
-    category = forms.ModelChoiceField(
-        queryset=Category.objects.all(),
-        label="Category"
-    )
+    category = forms.ModelChoiceField(queryset=Category.objects.all(), label="Category")
+    court = forms.ModelChoiceField(queryset=Court.objects.all(), label="Court")
+    participants = forms.ModelMultipleChoiceField(queryset=CustomUser.objects.all(), widget=ParticipantsWidget,
+                                                  label="Participants")
 
-    court = forms.ModelChoiceField(
-        queryset=Court.objects.all(),
-        label="Court"
-    )
+    def save(self, commit=True):
+        instance = super(GameForm, self).save(commit=False)
+        recurrence_type = self.cleaned_data.get('recurrence_type', None)
 
-    participants = forms.ModelMultipleChoiceField(
-        queryset=CustomUser.objects.all(),
-        widget=ParticipantsWidget,
-        label="Participants",
-    )
+        logger.info(f"Saving game: {instance.name}")
+        logger.info(f"Recurrence type: {recurrence_type}")
 
-    group = forms.ChoiceField(
-        choices=RECURRENCE_CHOICES,
-        label="Recurrence"
-    )
+        if recurrence_type:
+            start_date = instance.start_date_and_time
+            end_date = instance.end_date_and_time
+
+            group = RecurringGroup.objects.create(
+                recurrence_type=recurrence_type,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            logger.info(f"Recurring group created with ID: {group.group_id}")
+
+            instance.group = group
+
+        if commit:
+            instance.save()
+            self.save_m2m()
+            logger.info(f"Game saved with ID: {instance.id}")
+        return instance
 
 
 class CategoryForm(forms.ModelForm):
