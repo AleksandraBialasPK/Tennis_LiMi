@@ -10,7 +10,7 @@ from django.views.generic import FormView, ListView, TemplateView, CreateView, V
 from .models import Game, RecurringGroup, Participant, Category, Court
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic.edit import CreateView
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 import logging
@@ -63,12 +63,34 @@ class DayView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['events'] = self.object_list
-        context['game_form'] = GameForm()
+        events = self.get_queryset()
+        for event in events:
+            event.start_time_minutes = self.convert_string_time_to_minutes(event.start_date_and_time.strftime('%H:%M'))
+            event.end_time_minutes = self.convert_string_time_to_minutes(event.end_date_and_time.strftime('%H:%M'))
+            event.duration = event.end_time_minutes - event.start_time_minutes
+            event.margin_top = (event.start_time_minutes / 60) * 100  # assuming 100px per hour
+            event.height = (event.duration / 60) * 100  # assuming 100px per hour
+
+        context.update( {
+            'current_day': datetime.now().strftime('%A'),
+            'current_date': datetime.now().day,
+            'current_month': datetime.now().strftime('%B'),
+            'current_year': datetime.now().year,
+            'hours': range(1, 24),
+            'breaklines': range(23),
+            'events': events,
+            'game_form': GameForm()
+        })
         if self.request.user.is_staff:
-            context['court_form'] = CourtForm()
-            context['category_form'] = CategoryForm()
+            context.update({
+                'court_form': CourtForm(),
+                'category_form': CategoryForm()
+            })
         return context
+
+    def convert_string_time_to_minutes(self, time):
+        hours, minutes = map(int, time.split(':'))
+        return hours * 60 + minutes
 
     def post(self, request, *args, **kwargs):
         logger.info("Received POST request.")
@@ -150,104 +172,6 @@ class DayView(LoginRequiredMixin, ListView):
 
         logger.error("Form submission failed.")
         return render(request, self.template_name, context)
-
-# class DayView(LoginRequiredMixin, ListView):
-#     model = Game
-#     template_name = 'day.html'
-#     form_class = GameForm
-#     success_url = "day/"
-#     context_object_name = 'events'
-#
-#     def __init__(self, **kwargs):
-#         super().__init__(**kwargs)
-#         self.object_list = None
-#
-#     def get_queryset(self):
-#         return Game.objects.all()
-#
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context['events'] = self.object_list
-#         context['game_form'] = GameForm()
-#         if self.request.user.is_staff:
-#             context['court_form'] = CourtForm()
-#             context['category_form'] = CategoryForm()
-#         return context
-#
-#     def post(self, request, *args, **kwargs):
-#         self.object_list = self.get_queryset()  # Ensure object_list is set
-#
-#         game_form = GameForm(request.POST)
-#         court_form = CourtForm(request.POST)
-#         category_form = CategoryForm(request.POST)
-#
-#         if 'submit_game' in request.POST and game_form.is_valid():
-#             game = game_form.save(commit=False)
-#             recurrence_type = game_form.cleaned_data['group']
-#
-#             if recurrence_type:
-#                 start_date = game.start_date_and_time
-#                 end_date = game.end_date_and_time
-#
-#                 group = RecurringGroup.objects.create(
-#                     recurrence_type=recurrence_type,
-#                     start_date=start_date,
-#                     end_date=end_date
-#                 )
-#
-#                 game.group = group
-#                 game.save()
-#
-#                 delta = None
-#                 if recurrence_type == 'daily':
-#                     delta = timedelta(days=1)
-#                 elif recurrence_type == 'weekly':
-#                     delta = timedelta(weeks=1)
-#                 elif recurrence_type == 'biweekly':
-#                     delta = timedelta(weeks=2)
-#                 elif recurrence_type == 'monthly':
-#                     delta = relativedelta(months=1)
-#
-#                 if delta:
-#                     current_start_date = start_date + delta
-#                     current_end_date = end_date + delta
-#
-#                     while current_start_date <= group.end_date:
-#                         Game.objects.create(
-#                             name=game.name,
-#                             category=game.category,
-#                             court=game.court,
-#                             creator=game.creator,
-#                             start_date_and_time=current_start_date,
-#                             end_date_and_time=current_end_date,
-#                             group=group
-#                         )
-#                         current_start_date += delta
-#                         current_end_date += delta
-#
-#             else:
-#                 game.save()
-#
-#             return redirect('day')
-#
-#         if 'submit_court' in request.POST and court_form.is_valid():
-#             court_form.save()
-#             return redirect('day')
-#
-#         if 'submit_category' in request.POST and category_form.is_valid():
-#             category_form.save()
-#             return redirect('day')
-#
-#         context = self.get_context_data()
-#         context.update({
-#             'game_form': game_form,
-#         })
-#         if self.request.user.is_staff:
-#             context.update({
-#                 'court_form': court_form,
-#                 'category_form': category_form,
-#             })
-#         return render(request, self.template_name, context)
 
 
 class WeekView(LoginRequiredMixin, TemplateView):

@@ -350,6 +350,7 @@ button:hover {
 .day-grid-tile-container {
     display: grid;
     grid-column: 2 / span 1;
+    position: relative;
 }
 
 .day-grid-tile {
@@ -357,6 +358,8 @@ button:hover {
     border-radius: 0 5px 5px 0;
     display: grid;
     grid-template: repeat(24, 100px) / 1fr;
+    position: relative;
+    z-index: 1;
 }
 
 .day-break-line {
@@ -364,6 +367,8 @@ button:hover {
     height: 2px;
     background-color: #E2ECEA;
     border-radius: 5px;
+    position: absolute;
+    z-index: 2;
 }
 
 #blank-day-break-line {
@@ -573,6 +578,7 @@ button:hover {
     width: 200px;
     border-radius: 5px;
     display: flex;
+    z-index: 3;
 }
 
 .event-tile-sports {
