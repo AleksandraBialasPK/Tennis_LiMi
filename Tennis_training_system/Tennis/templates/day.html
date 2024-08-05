@@ -18,9 +18,12 @@
     <header>
         <nav class="date-nav" id="date-nav-day">
             <div class="change-date" id="change-date-day">
-                <div class="nav-arrows prev-day-btn"><i class="fa-solid fa-chevron-left"></i></div>
-                 <div class="day-with-date day">{{ current_day }} <br> {{ current_date }} {{ current_month }} {{ current_year }}</div>
-                <div class="nav-arrows next-day-btn"><i class="fa-solid fa-chevron-right"></i></div>
+                <div class="nav-arrows prev-day-btn" data-date="{{ prev_date }}"><i class="fa-solid fa-chevron-left"></i></div>
+                <div class="day-with-date day">
+                    <span>{{ current_day }}</span>
+                    <span id="current-date">{{ current_date }} {{ current_month }} {{ current_year }}</span>
+                </div>
+                <div class="nav-arrows next-day-btn" data-date="{{ next_date }}"><i class="fa-solid fa-chevron-right"></i></div>
             </div>
         </nav>
     </header>

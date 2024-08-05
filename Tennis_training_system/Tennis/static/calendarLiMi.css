@@ -232,6 +232,7 @@ header > nav {
 .day-with-date {
     width: 80%;
     display: flex;
+    flex-direction: column;
     text-align: center;
     justify-content: center;
 }
@@ -706,6 +707,8 @@ button:hover {
     }
 
     .day-with-date {
+        display: flex;
+        flex-direction: column;
         font-size: 1.2em;
     }
 
