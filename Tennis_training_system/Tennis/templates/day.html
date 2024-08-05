@@ -43,8 +43,8 @@
         <div class="event-container">
             {% if events %}
                 {% for event in events %}
-                    <div class="event-tile event-tile-sports" style="margin-top: {{ event.margin_top }}px; height: {{ event.height }}px;">
-                    <div class="side-color side-color-sports">
+                    <div class="event-tile event-tile-{{ event.category.name }}" style="margin-top: {{ event.margin_top }}px; height: {{ event.height }}px;">
+                    <div class="side-color side-color-{{ event.category.name }}">
                     <div class="picture-for-event"><img src="{% static 'avatars/Ola.png' %}" alt="Ola picture"/></div>
                  </div>
                  <div class="event-desc">

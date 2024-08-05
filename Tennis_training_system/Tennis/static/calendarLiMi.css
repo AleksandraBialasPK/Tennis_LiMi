@@ -524,55 +524,55 @@ button:hover {
     cursor: pointer;
 }
 
-.sports {
+.training {
     border: 2px solid #FF99B7;
     background-color: rgba(255, 153, 183, 0.3);
 }
 
-.work-school {
-    border: 2px solid #AEC3FF;
-    background-color: rgba(174, 195, 255, 0.3);
-}
+/*.work-school {*/
+/*    border: 2px solid #AEC3FF;*/
+/*    background-color: rgba(174, 195, 255, 0.3);*/
+/*}*/
 
-.home {
-    border: 2px solid #C6B9DF;
-    background-color: rgba(198, 185, 223, 0.3);
-}
+/*.home {*/
+/*    border: 2px solid #C6B9DF;*/
+/*    background-color: rgba(198, 185, 223, 0.3);*/
+/*}*/
 
-.social {
+.game {
     border: 2px solid #82CD47;
     background-color: rgba(130, 205, 71, 0.3);
 }
 
-.other {
-    border: 2px solid #FFEA20;
-    background-color: rgba(255, 234, 32, 0.3);
-}
+/*.other {*/
+/*    border: 2px solid #FFEA20;*/
+/*    background-color: rgba(255, 234, 32, 0.3);*/
+/*}*/
 
-.sports:checked {
+.training:checked {
     border: 2px solid #FF99B7;
     background-color: #FF99B7;
 }
 
-.work-school:checked {
-    border: 2px solid #AEC3FF;
-    background-color: #AEC3FF;
-}
+/*.work-school:checked {*/
+/*    border: 2px solid #AEC3FF;*/
+/*    background-color: #AEC3FF;*/
+/*}*/
 
-.home:checked {
-    border: 2px solid #C6B9DF;
-    background-color: #C6B9DF;
-}
+/*.home:checked {*/
+/*    border: 2px solid #C6B9DF;*/
+/*    background-color: #C6B9DF;*/
+/*}*/
 
-.social:checked {
+.game:checked {
     border: 2px solid #82CD47;
     background-color: #82CD47;
 }
 
-.other:checked {
-    border: 2px solid #FFEA20;
-    background-color: #FFEA20;
-}
+/*.other:checked {*/
+/*    border: 2px solid #FFEA20;*/
+/*    background-color: #FFEA20;*/
+/*}*/
 
 .event-tile {
     position: absolute;
@@ -582,25 +582,25 @@ button:hover {
     z-index: 3;
 }
 
-.event-tile-sports {
+.event-tile-Training {
     background-color: rgba(255, 153, 183, 0.3);
 }
 
-.event-tile-work-school {
-    background-color: rgba(174, 195, 255, 0.3);
-}
+/*.event-tile-work-school {*/
+/*    background-color: rgba(174, 195, 255, 0.3);*/
+/*}*/
 
-.event-tile-home {
-    background-color: rgba(198, 185, 223, 0.3);
-}
+/*.event-tile-home {*/
+/*    background-color: rgba(198, 185, 223, 0.3);*/
+/*}*/
 
-.event-tile-social {
+.event-tile-Game {
     background-color: rgba(130, 205, 71, 0.3);
 }
 
-.event-tile-other {
-    background-color: rgba(255, 234, 32, 0.3);
-}
+/*.event-tile-other {*/
+/*    background-color: rgba(255, 234, 32, 0.3);*/
+/*}*/
 
 .side-color {
     width: 44px;
@@ -611,25 +611,25 @@ button:hover {
     justify-content: center;
 }
 
-.side-color-sports{
+.side-color-Training{
     background-color: #FF99B7;
 }
 
-.side-color-work-school{
-    background-color: #AEC3FF;
-}
+/*.side-color-work-school{*/
+/*    background-color: #AEC3FF;*/
+/*}*/
 
-.side-color-home {
-    background-color: #C6B9DF;
-}
+/*.side-color-home {*/
+/*    background-color: #C6B9DF;*/
+/*}*/
 
-.side-color-social {
+.side-color-Game {
     background-color: #82CD47;
 }
 
-.side-color-other {
-    background-color: #FFEA20;
-}
+/*.side-color-other {*/
+/*    background-color: #FFEA20;*/
+/*}*/
 
 .picture-for-event {
     padding-top: 5px;
