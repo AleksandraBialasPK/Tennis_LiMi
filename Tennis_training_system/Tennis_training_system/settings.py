@@ -12,21 +12,30 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 import logging
+import environ
+
+# Initialize environment variables
+env = environ.Env(
+    DEBUG=(bool, False)
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Read .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-kil=q0hvg=&fazml_r$8@x^yqv4==i+!&sz$aie&*zhwj^zya$'
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 AUTH_USER_MODEL = 'Tennis.CustomUser'
 # Application definition
@@ -41,7 +50,17 @@ INSTALLED_APPS = [
     'Tennis.apps.TennisConfig',
     'widget_tweaks',
     'fontawesomefree',
+    'django_select2',
+    'channels',
 ]
+
+ASGI_APPLICATION = 'Tennis_training_system.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -80,11 +99,11 @@ WSGI_APPLICATION = 'Tennis_training_system.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': 'BTaNKOluJGkakOFdXeYlTilgRUZgEsTd',
-        'HOST': 'roundhouse.proxy.rlwy.net',
-        'PORT': '51435',
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST'),
+        'PORT': env('DB_PORT'),
     }
 }
 
@@ -107,8 +126,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',  # Keep the default backend
-    'Tennis.authentication_backends.EmailBackend',  # Replace 'your_app' with your app name
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # Internationalization
@@ -132,40 +150,10 @@ STATICFILES_DIRS = [BASE_DIR / "Tennis/static"]
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-ADMIN_URL = 'admin/'
+# Admin settings
+ADMIN_URL = env('ADMIN_URL')
 
-LOGOUT_REDIRECT_URL = '/'
-LOGIN_URL = '/'
-LOGIN_REDIRECT_URL = 'day/'
-
-# Configure logging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'django.log'),
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-        },
-        'Tennis': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-        },
-    },
-    "": {
-        'handlers': ['file'],
-        'level': 'DEBUG',
-        "propagate": True,
-    },
-    'Tennis_training_system': {
-        'handlers': ['file'],
-        'level': 'DEBUG',
-    },
-}
+# Auth settings
+LOGOUT_REDIRECT_URL = env('LOGOUT_REDIRECT_URL')
+LOGIN_URL = env('LOGIN_URL')
+LOGIN_REDIRECT_URL = env('LOGIN_REDIRECT_URL')

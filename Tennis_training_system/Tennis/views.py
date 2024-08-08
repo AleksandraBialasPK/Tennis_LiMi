@@ -1,6 +1,8 @@
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.shortcuts import render, redirect
+from django.utils.timezone import now
+
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
@@ -10,10 +12,14 @@ from django.views.generic import FormView, ListView, TemplateView, CreateView, V
 from .models import Game, RecurringGroup, Participant, Category, Court
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic.edit import CreateView
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 import logging
+from django.http import JsonResponse
+from django.utils.dateparse import parse_date
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 logger = logging.getLogger(__name__)
 
@@ -50,36 +56,38 @@ class CustomLoginView(LoginView):
 class DayView(LoginRequiredMixin, ListView):
     model = Game
     template_name = 'day.html'
-    form_class = GameForm
-    success_url = "day/"
     context_object_name = 'events'
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.object_list = None
-
     def get_queryset(self):
-        return Game.objects.all()
+        date_str = self.request.GET.get('date')
+        if date_str:
+            date = parse_date(date_str)
+        else:
+            date = now().date()
+        return Game.objects.filter(start_date_and_time__date=date)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        events = self.get_queryset()
+        events = self.object_list
         for event in events:
             event.start_time_minutes = self.convert_string_time_to_minutes(event.start_date_and_time.strftime('%H:%M'))
             event.end_time_minutes = self.convert_string_time_to_minutes(event.end_date_and_time.strftime('%H:%M'))
             event.duration = event.end_time_minutes - event.start_time_minutes
-            event.margin_top = (event.start_time_minutes / 60) * 100  # assuming 100px per hour
-            event.height = (event.duration / 60) * 100  # assuming 100px per hour
+            event.margin_top = (event.start_time_minutes / 60) * 100
+            event.height = (event.duration / 60) * 100
 
-        context.update( {
-            'current_day': datetime.now().strftime('%A'),
-            'current_date': datetime.now().day,
-            'current_month': datetime.now().strftime('%B'),
-            'current_year': datetime.now().year,
+        date = parse_date(self.request.GET.get('date')) if self.request.GET.get('date') else now().date()
+        context.update({
+            'current_day': date.strftime('%A'),
+            'current_date': date.day,
+            'current_month': date.strftime('%B'),
+            'current_year': date.year,
             'hours': range(1, 24),
             'breaklines': range(23),
             'events': events,
-            'game_form': GameForm()
+            'game_form': GameForm(),
+            'prev_date': (date - timedelta(days=1)).strftime('%Y-%m-%d'),
+            'next_date': (date + timedelta(days=1)).strftime('%Y-%m-%d')
         })
         if self.request.user.is_staff:
             context.update({
@@ -94,8 +102,6 @@ class DayView(LoginRequiredMixin, ListView):
 
     def post(self, request, *args, **kwargs):
         logger.info("Received POST request.")
-        self.object_list = self.get_queryset()
-
         game_form = GameForm(request.POST)
         court_form = CourtForm(request.POST)
         category_form = CategoryForm(request.POST)
@@ -104,13 +110,35 @@ class DayView(LoginRequiredMixin, ListView):
 
         if 'submit_game' in request.POST:
             if game_form.is_valid():
-                logger.info("Game form is valid.")
                 game = game_form.save(commit=False)
                 game.creator = request.user
-                logger.info(f"Creator before save: {game.creator}")
                 game.save()
-                logger.info(f"Game '{game.name}' created successfully.")
+                logger.info(f"Game saved with id: {game.game_id}")
 
+                event_data = {
+                    'game_id': game.game_id,
+                    'name': game.name,
+                    'start_date_and_time': game.start_date_and_time.isoformat(),
+                    'end_date_and_time': game.end_date_and_time.isoformat(),
+                    'category': game.category.name,
+                    'start_time_minutes': self.convert_string_time_to_minutes(game.start_date_and_time.strftime('%H:%M')),
+                    'end_time_minutes': self.convert_string_time_to_minutes(game.end_date_and_time.strftime('%H:%M')),
+                    'duration': (game.end_date_and_time - game.start_date_and_time).seconds // 60,
+                    'margin_top': (self.convert_string_time_to_minutes(game.start_date_and_time.strftime('%H:%M')) / 60) * 100,
+                    'height': ((self.convert_string_time_to_minutes(game.end_date_and_time.strftime('%H:%M')) - self.convert_string_time_to_minutes(game.start_date_and_time.strftime('%H:%M'))) / 60) * 100
+                }
+
+                # Sending update to WebSocket
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    'events',
+                    {
+                        'type': 'send_event_update',
+                        'event': event_data
+                    }
+                )
+
+                # Handling recurrence if applicable
                 if game.group:
                     recurrence_type = game.group.recurrence_type
                     start_date = game.start_date_and_time
@@ -144,18 +172,16 @@ class DayView(LoginRequiredMixin, ListView):
                             current_end_date += delta
 
                 return redirect('day')
+
             else:
                 logger.error(f"Game form is invalid. Errors: {game_form.errors}")
-                for field, errors in game_form.errors.items():
-                    for error in errors:
-                        logger.error(f"Error in {field}: {error}")
 
-        if 'submit_court' in request.POST and court_form.is_valid():
+        elif 'submit_court' in request.POST and court_form.is_valid():
             court_form.save()
             logger.info("Court created successfully.")
             return redirect('day')
 
-        if 'submit_category' in request.POST and category_form.is_valid():
+        elif 'submit_category' in request.POST and category_form.is_valid():
             category_form.save()
             logger.info("Category created successfully.")
             return redirect('day')
