@@ -41,17 +41,18 @@ AUTH_USER_MODEL = 'Tennis.CustomUser'
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
+    'channels',
+    'Tennis.apps.TennisConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'Tennis.apps.TennisConfig',
     'widget_tweaks',
     'fontawesomefree',
     'django_select2',
-    'channels',
 ]
 
 ASGI_APPLICATION = 'Tennis_training_system.asgi.application'
@@ -77,7 +78,7 @@ ROOT_URLCONF = 'Tennis_training_system.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -145,9 +146,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "Tennis/static"]
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static/Tennis',]
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'mediafiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Admin settings
