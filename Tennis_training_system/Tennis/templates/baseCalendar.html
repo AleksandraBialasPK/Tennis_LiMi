@@ -54,18 +54,21 @@
 
     <section class="sidebar-nav">
         <div class="navigation">
-            <button class="create-new-event" id="create-new-event-button" type="button">Add a new game</button>
-            <button class="create-new-event" id="add-new-court-button" type="button">Add a new court</button>
-            <button class="create-new-event" id="create-new-category-button" type="button">Add a new category</button>
+            {% block day-week-nav %}
+            {% endblock %}
             <div class="events">
                 <label for="Training"><input type="checkbox" class="checkbox-event Training" id="Training" name="Training" checked>Training</label>
                 <label for="Game"><input type="checkbox" class="checkbox-event Game" id="Game" name="Game" checked>Game</label>
             </div>
-            {% block day-week-nav %}
-            {% endblock %}
+            <div class="create-new-stuff-buttons">
+                <button class="create-new-event-button" id="create-new-event-button" type="button">Add a new game</button>
+                {% if request.user.is_staff %}
+                <button class="create-new-event-button" id="add-new-court-button" type="button">Add a new court</button>
+                <button class="create-new-event-button" id="create-new-category-button" type="button">Add a new category</button>
+                {% endif %}
+            </div>
         </div>
         {% if request.user.is_staff %}
-            <h3>Hello Admin</h3>
             <form class="new-event-form" id="court_form" method="POST">
                 {% csrf_token %}
                 {{ court_form.as_p }}

@@ -48,12 +48,26 @@
                     <p>{{ event.category.name }}</p>
                 </div>
                 {% endfor %}
-            {% else %}
-                <p>No events for this day.</p>
             {% endif %}
         </div>
     </section>
 </main>
     <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
     <script src="{% static 'JS/events.js' %}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const prevDayBtn = document.querySelector('.prev-day-btn');
+        const nextDayBtn = document.querySelector('.next-day-btn');
+
+        prevDayBtn.addEventListener('click', function() {
+            const date = this.getAttribute('data-date');
+            window.location.href = `?date=${date}`;
+        });
+
+        nextDayBtn.addEventListener('click', function() {
+            const date = this.getAttribute('data-date');
+            window.location.href = `?date=${date}`;
+        });
+    });
+</script>
 {% endblock %}
