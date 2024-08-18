@@ -1,3 +1,4 @@
+/* Ogólne style */
 * {
     box-sizing: border-box;
     font-family: 'Montserrat', sans-serif;
@@ -13,6 +14,7 @@ body {
     min-height: 100%;
 }
 
+/* Sidebar Navigation */
 .sidebar-nav {
     position: relative;
     z-index: 2;
@@ -39,19 +41,103 @@ body {
     grid-row: 1 / span 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    align-content: center;
+    gap: 20px;
+}
+
+.create-new-stuff-buttons {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.create-new-event-button {
+    box-sizing: border-box;
+    width: 100px;
+    height: 60px;
+    min-width: 80px;
+    background: #046380;
+    color: #FFFFFF;
+    border: 1px solid #046380;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    padding: 10px 10px;
+    margin: 10px 10px;
+}
+
+.create-new-event-button,
+.create-new-event-button,
+.create-new-event-button {
+    transform: scale(1.1);
+    outline: none;
+}
+
+#add-new-court-button, #create-new-category-button {
+    color: #515151;
+    background: none;
+    border: 1px solid crimson;
+    font-weight: 580;
+}
+
+.not-enhanced-buttons {
+    min-width: 30%;
+    background: none;
+    color: #515151;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.not-enhanced-button:active,
+.not-enhanced-button:focus,
+.not-enhanced-button:hover {
+    transform: scale(1.1);
+    outline: none;
+    color: #046380;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    background-color: white;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin: 5px 1em;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+}
+
+.avatar>img {
+    width: 50px;
+    height: 50px;
+    background-size: cover;
+    background-position: top center;
+    border-radius: 50%;
+}
+
+.person {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
     align-items: center;
 }
 
-.admin-alert {
-    color: crimson;
-    margin: 0;
+.name {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
-
+/* forms */
 .new-event-form {
     position: fixed;
     top: 18%;
-    right: 45%;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     text-align: center;
@@ -59,16 +145,7 @@ body {
     border-radius: 5px;
     border: 2px solid #046380;
     background-color: #ffffff;
-    padding: 2em 2em;
-}
-
-.user-add-event {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding-top: 20px;
-    padding-bottom: 20px;
+    padding: 2em;
 }
 
 .user-icon-add-event {
@@ -91,7 +168,6 @@ body {
     border-radius: 50%;
 }
 
-
 .add-event-form-divs {
     display: flex;
     justify-content: center;
@@ -111,17 +187,7 @@ select {
     margin-left: 10px;
 }
 
-#btn-add-new-event {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 15px 15px;
-    margin-top: 25px;
-    height: 50px;
-    min-width: 50%;
-    cursor: pointer;
-}
-
+/* CALENDAR */
 main {
     width: 86%;
     height: 100%;
@@ -168,11 +234,14 @@ header > nav {
 
 .views-nav {
     box-sizing: border-box;
-    display: inline-flex;
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    width: 200px;
     height: 60px;
+    width: 100%;
+    margin-top: 50px;
 }
 
 .day-week-nav {
@@ -247,50 +316,6 @@ header > nav {
 .django-select2 {
     width: 100%;
     max-width: 100%;
-}
-
-button {
-    box-sizing: border-box;
-    width: 80px;
-    height: 30px;
-    min-width: 30%;
-    background: rgba(4, 99, 128, 0.95);
-    color: #F7F7F5;
-    border: 1px solid #046380;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-button:active,
-button:focus,
-button:hover {
-    transform: scale(1.1);
-    outline: none;
-}
-
-.not-enhanced-buttons {
-    min-width: 30%;
-    background: none;
-    color: #515151;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-.not-enhanced-button:active,
-.not-enhanced-button:focus,
-.not-enhanced-button:hover {
-    transform: scale(1.1);
-    outline: none;
-    color: #046380;
-}
-
-#create-new-event-button {
-    width: 100px;
-    height: 60px;
-    padding: 5px 5px;
-    margin: 25% 15px 15px 15px;
 }
 
 .calendar-with-timeline-container {
@@ -466,39 +491,6 @@ button:hover {
 
 .sunday-grid-tiles {
     grid-column: 7 / span 1;
-}
-
-.avatar {
-    width: 50px;
-    height: 50px;
-    background-color: white;
-    border-radius: 50%;
-    vertical-align: middle;
-    margin: 5px 1em;
-    appearance: none;
-    -webkit-appearance: none;
-    outline: none;
-}
-
-.avatar>img {
-    width: 50px;
-    height: 50px;
-    background-size: cover;
-    background-position: top center;
-    border-radius: 50%;
-}
-
-.person {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-}
-
-.name {
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .events {
