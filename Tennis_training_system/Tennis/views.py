@@ -2,7 +2,6 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.utils.timezone import now
-
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
@@ -60,34 +59,17 @@ class DayView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         date_str = self.request.GET.get('date')
-        if date_str:
-            date = parse_date(date_str)
-        else:
-            date = now().date()
+        date = parse_date(date_str) if date_str else now().date()
         return Game.objects.filter(start_date_and_time__date=date)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        events = self.object_list
-        for event in events:
-            event.start_time_minutes = self.convert_string_time_to_minutes(event.start_date_and_time.strftime('%H:%M'))
-            event.end_time_minutes = self.convert_string_time_to_minutes(event.end_date_and_time.strftime('%H:%M'))
-            event.duration = event.end_time_minutes - event.start_time_minutes
-            event.margin_top = (event.start_time_minutes / 60) * 100
-            event.height = (event.duration / 60) * 100
-
         date = parse_date(self.request.GET.get('date')) if self.request.GET.get('date') else now().date()
+
         context.update({
-            'current_day': date.strftime('%A'),
-            'current_date': date.day,
-            'current_month': date.strftime('%B'),
-            'current_year': date.year,
             'hours': range(1, 24),
             'breaklines': range(23),
-            'events': events,
             'game_form': GameForm(),
-            'prev_date': (date - timedelta(days=1)).strftime('%Y-%m-%d'),
-            'next_date': (date + timedelta(days=1)).strftime('%Y-%m-%d')
         })
         if self.request.user.is_staff:
             context.update({
@@ -95,10 +77,6 @@ class DayView(LoginRequiredMixin, ListView):
                 'category_form': CategoryForm()
             })
         return context
-
-    def convert_string_time_to_minutes(self, time):
-        hours, minutes = map(int, time.split(':'))
-        return hours * 60 + minutes
 
     def post(self, request, *args, **kwargs):
         logger.info("Received POST request.")
@@ -128,17 +106,6 @@ class DayView(LoginRequiredMixin, ListView):
                     'height': ((self.convert_string_time_to_minutes(game.end_date_and_time.strftime('%H:%M')) - self.convert_string_time_to_minutes(game.start_date_and_time.strftime('%H:%M'))) / 60) * 100
                 }
 
-                # Sending update to WebSocket
-                channel_layer = get_channel_layer()
-                async_to_sync(channel_layer.group_send)(
-                    'events',
-                    {
-                        'type': 'send_event_update',
-                        'event': event_data
-                    }
-                )
-
-                # Handling recurrence if applicable
                 if game.group:
                     recurrence_type = game.group.recurrence_type
                     start_date = game.start_date_and_time
@@ -171,6 +138,15 @@ class DayView(LoginRequiredMixin, ListView):
                             current_start_date += delta
                             current_end_date += delta
 
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    'events',
+                    {
+                        'type': 'send_event_update',
+                        'event': event_data
+                    }
+                )
+
                 return redirect('day')
 
             else:
@@ -202,4 +178,3 @@ class DayView(LoginRequiredMixin, ListView):
 
 class WeekView(LoginRequiredMixin, TemplateView):
     template_name = 'week.html'
-

@@ -7,10 +7,8 @@
 {% endblock %}
 
 {% block day-week-nav %}
-    <div class="views-nav">
         <a href="day" class="day-week-nav active-view">Day</a>
         <a href="week" class="day-week-nav">Week</a>
-    </div>
 {% endblock %}
 
 {% block day %}
@@ -18,12 +16,11 @@
     <header>
         <nav class="date-nav" id="date-nav-day">
             <div class="change-date" id="change-date-day">
-                <div class="nav-arrows prev-day-btn" data-date="{{ prev_date }}"><i class="fa-solid fa-chevron-left"></i></div>
+                <div class="nav-arrows prev-day-btn" data-date=""><i class="fa-solid fa-chevron-left"></i></div>
                 <div class="day-with-date day">
-                    <span>{{ current_day }}</span>
-                    <span id="current-date">{{ current_date }} {{ current_month }} {{ current_year }}</span>
+                    <span id="current-date"></span>
                 </div>
-                <div class="nav-arrows next-day-btn" data-date="{{ next_date }}"><i class="fa-solid fa-chevron-right"></i></div>
+                <div class="nav-arrows next-day-btn" data-date=""><i class="fa-solid fa-chevron-right"></i></div>
             </div>
         </nav>
     </header>
@@ -40,34 +37,10 @@
                     <div class="day-break-line" style="top: {{ breakline|add:1 }}00px;"></div>
                 {% endfor %}
         </div>
-        <div class="event-container">
-            {% if events %}
-                {% for event in events %}
-                <div class="event" style="top: {{ event.margin_top }}%; height: {{ event.height }}%;">
-                    <p>{{ event.name }}</p>
-                    <p>{{ event.category.name }}</p>
-                </div>
-                {% endfor %}
-            {% endif %}
+        <div class="event-container" id="events">
         </div>
     </section>
 </main>
     <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
     <script src="{% static 'JS/events.js' %}"></script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const prevDayBtn = document.querySelector('.prev-day-btn');
-        const nextDayBtn = document.querySelector('.next-day-btn');
-
-        prevDayBtn.addEventListener('click', function() {
-            const date = this.getAttribute('data-date');
-            window.location.href = `?date=${date}`;
-        });
-
-        nextDayBtn.addEventListener('click', function() {
-            const date = this.getAttribute('data-date');
-            window.location.href = `?date=${date}`;
-        });
-    });
-</script>
 {% endblock %}

@@ -54,8 +54,10 @@
 
     <section class="sidebar-nav">
         <div class="navigation">
-            {% block day-week-nav %}
-            {% endblock %}
+            <div class="views-nav">
+                {% block day-week-nav %}
+                {% endblock %}
+            </div>
             <div class="events">
                 <label for="Training"><input type="checkbox" class="checkbox-event Training" id="Training" name="Training" checked>Training</label>
                 <label for="Game"><input type="checkbox" class="checkbox-event Game" id="Game" name="Game" checked>Game</label>
