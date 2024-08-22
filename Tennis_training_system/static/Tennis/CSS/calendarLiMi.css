@@ -240,11 +240,12 @@ header > nav {
     padding: 0 20px;
     top: 50%;
     transform: translateY(-50%);
+    height: 60px;
 }
 
 .back-to-today:hover {
     color: #046380;
-    transform: scale(1.1);
+    transform: translateY(-50%) scale(1.1);
 }
 
 .back-to-today i {
