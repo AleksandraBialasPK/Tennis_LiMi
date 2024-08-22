@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.utils.timezone import now
+from django.utils.timezone import now, make_aware
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
@@ -11,14 +11,10 @@ from django.views.generic import FormView, ListView, TemplateView, CreateView, V
 from .models import Game, RecurringGroup, Participant, Category, Court
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic.edit import CreateView
-from datetime import timedelta, datetime, date
+from datetime import timedelta, datetime, date, time
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 import logging
-from django.http import JsonResponse
-from django.utils.dateparse import parse_date
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 
 logger = logging.getLogger(__name__)
 
@@ -55,28 +51,26 @@ class CustomLoginView(LoginView):
 class DayView(LoginRequiredMixin, ListView):
     model = Game
     template_name = 'day.html'
-    context_object_name = 'events'
-
-    def get_queryset(self):
-        date_str = self.request.GET.get('date')
-        date = parse_date(date_str) if date_str else now().date()
-        return Game.objects.filter(start_date_and_time__date=date)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        date = parse_date(self.request.GET.get('date')) if self.request.GET.get('date') else now().date()
+        context.update(self.get_base_context())
+        if self.request.user.is_staff:
+            context.update(self.get_staff_context())
+        return context
 
-        context.update({
+    def get_base_context(self):
+        return {
             'hours': range(1, 24),
             'breaklines': range(23),
             'game_form': GameForm(),
-        })
-        if self.request.user.is_staff:
-            context.update({
-                'court_form': CourtForm(),
-                'category_form': CategoryForm()
-            })
-        return context
+        }
+
+    def get_staff_context(self):
+        return {
+            'court_form': CourtForm(),
+            'category_form': CategoryForm(),
+        }
 
     def post(self, request, *args, **kwargs):
         logger.info("Received POST request.")
@@ -84,96 +78,97 @@ class DayView(LoginRequiredMixin, ListView):
         court_form = CourtForm(request.POST)
         category_form = CategoryForm(request.POST)
 
-        logger.info(f"Form data received: {request.POST}")
-
         if 'submit_game' in request.POST:
-            if game_form.is_valid():
-                game = game_form.save(commit=False)
-                game.creator = request.user
-                game.save()
-                logger.info(f"Game saved with id: {game.game_id}")
+            return self.handle_game_form(game_form)
 
-                event_data = {
-                    'game_id': game.game_id,
-                    'name': game.name,
-                    'start_date_and_time': game.start_date_and_time.isoformat(),
-                    'end_date_and_time': game.end_date_and_time.isoformat(),
-                    'category': game.category.name,
-                    'start_time_minutes': self.convert_string_time_to_minutes(game.start_date_and_time.strftime('%H:%M')),
-                    'end_time_minutes': self.convert_string_time_to_minutes(game.end_date_and_time.strftime('%H:%M')),
-                    'duration': (game.end_date_and_time - game.start_date_and_time).seconds // 60,
-                    'margin_top': (self.convert_string_time_to_minutes(game.start_date_and_time.strftime('%H:%M')) / 60) * 100,
-                    'height': ((self.convert_string_time_to_minutes(game.end_date_and_time.strftime('%H:%M')) - self.convert_string_time_to_minutes(game.start_date_and_time.strftime('%H:%M'))) / 60) * 100
-                }
-
-                if game.group:
-                    recurrence_type = game.group.recurrence_type
-                    start_date = game.start_date_and_time
-                    end_date = game.end_date_and_time
-
-                    delta = None
-                    if recurrence_type == 'daily':
-                        delta = timedelta(days=1)
-                    elif recurrence_type == 'weekly':
-                        delta = timedelta(weeks=1)
-                    elif recurrence_type == 'biweekly':
-                        delta = timedelta(weeks=2)
-                    elif recurrence_type == 'monthly':
-                        delta = relativedelta(months=1)
-
-                    if delta:
-                        current_start_date = start_date + delta
-                        current_end_date = end_date + delta
-
-                        while current_start_date <= game.group.end_date:
-                            Game.objects.create(
-                                name=game.name,
-                                category=game.category,
-                                court=game.court,
-                                start_date_and_time=current_start_date,
-                                end_date_and_time=current_end_date,
-                                group=game.group,
-                                creator=request.user
-                            )
-                            current_start_date += delta
-                            current_end_date += delta
-
-                channel_layer = get_channel_layer()
-                async_to_sync(channel_layer.group_send)(
-                    'events',
-                    {
-                        'type': 'send_event_update',
-                        'event': event_data
-                    }
-                )
-
-                return redirect('day')
-
-            else:
-                logger.error(f"Game form is invalid. Errors: {game_form.errors}")
-
-        elif 'submit_court' in request.POST and court_form.is_valid():
+        if 'submit_court' in request.POST and court_form.is_valid():
             court_form.save()
             logger.info("Court created successfully.")
             return redirect('day')
 
-        elif 'submit_category' in request.POST and category_form.is_valid():
+        if 'submit_category' in request.POST and category_form.is_valid():
             category_form.save()
             logger.info("Category created successfully.")
             return redirect('day')
 
+        return self.form_invalid_response(game_form, court_form, category_form)
+
+    def handle_game_form(self, game_form):
+        if game_form.is_valid():
+            game = self.save_game(game_form)
+            if game.group:
+                self.handle_recurring_events(game)
+            return redirect('day')
+        else:
+            logger.error(f"Game form is invalid. Errors: {game_form.errors}")
+            return self.form_invalid_response(game_form)
+
+    def save_game(self, game_form):
+        game = game_form.save(commit=False)
+        game.creator = self.request.user
+        game.save()
+        logger.info(f"Game saved with id: {game.game_id}")
+        return game
+
+    def handle_recurring_events(self, game):
+        if not game.group:
+            print(f"Game {game.name} does not have a group set for recurrence.")
+            return
+
+        recurrence_type = game.group.recurrence_type
+        delta = self.get_recurrence_delta(recurrence_type)
+
+        if delta is None:
+            print(f"Delta is None: {recurrence_type}")
+            return
+
+        if delta:
+            # Konwersja end_date na datetime z godziną 23:59
+            recurrence_end_datetime = datetime.combine(game.group.end_date, time(23, 59))
+            recurrence_end_datetime = make_aware(recurrence_end_datetime)
+            current_start_date = game.start_date_and_time + delta
+            current_end_date = game.end_date_and_time + delta
+
+            print(f"Creating recurring events for game {game.name} with recurrence type {recurrence_type}.")
+            print(f"Initial event start: {game.start_date_and_time}, end: {game.end_date_and_time}")
+
+            while current_start_date <= recurrence_end_datetime:
+                print(f"Creating event on {current_start_date} to {current_end_date}")
+                Game.objects.create(
+                    name=game.name,
+                    category=game.category,
+                    court=game.court,
+                    start_date_and_time=current_start_date,
+                    end_date_and_time=current_end_date,
+                    group=game.group,
+                    creator=self.request.user
+                )
+                current_start_date += delta
+                current_end_date += delta
+
+    def get_recurrence_delta(self, recurrence_type):
+        if recurrence_type == 'daily':
+            return timedelta(days=1)
+        elif recurrence_type == 'weekly':
+            return timedelta(weeks=1)
+        elif recurrence_type == 'biweekly':
+            return timedelta(weeks=2)
+        elif recurrence_type == 'monthly':
+            return relativedelta(months=1)
+        else:
+            print(f"Unrecognized recurrence type: {recurrence_type}")
+        return None
+
+    def form_invalid_response(self, game_form, court_form=None, category_form=None):
         context = self.get_context_data()
-        context.update({
-            'game_form': game_form,
-        })
+        context.update({'game_form': game_form})
         if self.request.user.is_staff:
             context.update({
-                'court_form': court_form,
-                'category_form': category_form,
+                'court_form': court_form or CourtForm(),
+                'category_form': category_form or CategoryForm(),
             })
-
         logger.error("Form submission failed.")
-        return render(request, self.template_name, context)
+        return render(self.request, self.template_name, context)
 
 
 class WeekView(LoginRequiredMixin, TemplateView):

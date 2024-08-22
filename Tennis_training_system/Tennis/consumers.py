@@ -1,10 +1,11 @@
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.utils.dateparse import parse_date
 from django.utils.timezone import now
 from channels.db import database_sync_to_async
 from Tennis.models import Game
+
 
 class EventConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -32,6 +33,13 @@ class EventConsumer(AsyncWebsocketConsumer):
         for event in events:
             event['start_date_and_time'] = event['start_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
             event['end_date_and_time'] = event['end_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
+            start_time = event['start_date_and_time'].split(' ')[1]
+            end_time = event['end_date_and_time'].split(' ')[1]
+            start_time_minutes = self.convert_string_time_to_minutes(start_time)
+            end_time_minutes = self.convert_string_time_to_minutes(end_time)
+            duration = end_time_minutes - start_time_minutes
+            event['margin_top'] = (start_time_minutes / 60) * 100
+            event['height'] = (duration / 60) * 100
             print(f"Converted event: {event}")
 
         current_date_info = {
@@ -57,3 +65,13 @@ class EventConsumer(AsyncWebsocketConsumer):
             'name', 'category__name', 'start_date_and_time', 'end_date_and_time'
         )
         return list(events)
+
+    def convert_string_time_to_minutes(self, time_str):
+        """
+        Convert a time string in the format 'HH:MM:SS' to the total number of minutes since midnight.
+
+        :param time_str: A string representing time in 'HH:MM:SS' format.
+        :return: Total number of minutes since midnight.
+        """
+        hours, minutes, _ = map(int, time_str.split(':'))
+        return hours * 60 + minutes

@@ -124,7 +124,7 @@ class RecurringGroup(models.Model):
 
 class Game(models.Model):
     game_id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=20, unique=True, default='Tennis game')
+    name = models.CharField(max_length=20, default='Tennis game')
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     court = models.ForeignKey(Court, on_delete=models.CASCADE)
     creator = models.ForeignKey(CustomUser, on_delete=models.CASCADE)

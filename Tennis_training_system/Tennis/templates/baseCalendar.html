@@ -42,6 +42,9 @@
         {% else %}
             <p>Formularz nie został przekazany.</p>
         {% endif %}
+         <div id="recurrence-end-date" style="display: none;">
+            {{ game_form.end_date_of_recurrence.label_tag }} {{ game_form.end_date_of_recurrence }}
+        </div>
         <button type="submit" name="submit_game">Add</button>
     </form>
     <script>
@@ -86,7 +89,7 @@
             <div class="events">
                 <div class="person" id="person_1">
                     <div class="avatar">
-                        <img src="{% static 'avatars/Ola.png' %}" alt="Ola picture">
+                        <img src="{% static 'images/Ola.png' %}" alt="Ola picture">
                     </div>
                 </div>
                 <div class="nickname">
@@ -104,4 +107,15 @@
     </section>
 </body>
 <script src="{% static 'JS/createNewEvent.js' %}"></script>
+<script>
+    document.getElementById("id_recurrence_type").addEventListener("change", function() {
+        var recurrenceType = this.value;
+        var recurrenceEndDate = document.getElementById("recurrence-end-date");
+        if (recurrenceType && recurrenceType !== 'None') {
+            recurrenceEndDate.style.display = "block";
+        } else {
+            recurrenceEndDate.style.display = "none";
+        }
+    });
+</script>
 </html>

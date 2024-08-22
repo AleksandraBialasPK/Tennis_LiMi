@@ -24,10 +24,12 @@ class ParticipantsWidget(ModelSelect2MultipleWidget):
 
 class GameForm(forms.ModelForm):
     recurrence_type = forms.ChoiceField(choices=RECURRENCE_CHOICES, required=False, label="Recurrence Type")
+    end_date_of_recurrence = forms.DateField(required=False, label="End Date of Recurrence",
+                                             widget=forms.DateInput(attrs={'type': 'date'}))
 
     class Meta:
         model = Game
-        fields = ['name', 'category', 'start_date_and_time', 'end_date_and_time', 'court', 'participants']
+        fields = ['name', 'category', 'start_date_and_time', 'end_date_and_time', 'court', 'participants', 'recurrence_type']
         widgets = {
             'start_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -41,22 +43,18 @@ class GameForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super(GameForm, self).save(commit=False)
         recurrence_type = self.cleaned_data.get('recurrence_type', None)
+        end_date_of_recurrence = self.cleaned_data.get('end_date_of_recurrence', None)
 
         logger.info(f"Saving game: {instance.name}")
         logger.info(f"Recurrence type: {recurrence_type}")
 
-        if recurrence_type:
-            start_date = instance.start_date_and_time
-            end_date = instance.end_date_and_time
-
+        if recurrence_type and end_date_of_recurrence:
             group = RecurringGroup.objects.create(
                 recurrence_type=recurrence_type,
-                start_date=start_date,
-                end_date=end_date
+                start_date=instance.start_date_and_time,
+                end_date=end_date_of_recurrence
             )
-
             logger.info(f"Recurring group created with ID: {group.group_id}")
-
             instance.group = group
 
         if commit:

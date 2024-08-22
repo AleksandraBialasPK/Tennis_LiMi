@@ -48,16 +48,27 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Dodanie pojedynczego wydarzenia do kontenera wydarzeń
     function appendEvent(event) {
         const eventsDiv = document.getElementById("events");
         const eventDiv = document.createElement("div");
-        eventDiv.className = "event";
+
+        // Set the appropriate classes and styles based on the event data
+        eventDiv.className = `event-tile event-tile-${event.category__name}`;
+        eventDiv.style.marginTop = `${event.margin_top}px`;
+        eventDiv.style.height = `${event.height}px`;
+
         eventDiv.innerHTML = `
-            <p>${event.name}</p>
-            <p>${event.category__name}</p>
-            <p>${new Date(event.start_date_and_time).toLocaleString()} - ${new Date(event.end_date_and_time).toLocaleString()}</p>
+            <div class="side-color side-color-${event.category__name}">
+                <div class="picture-for-event">
+                    <img src="{% static 'images/Ola.png' %}" alt="user's profile picture"/>
+                </div>
+            </div>
+            <div class="event-desc">
+                <div class="event-name">${event.name}</div>
+                <div class="event-time">${new Date(event.start_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - ${new Date(event.end_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
+            </div>
         `;
+
         eventsDiv.appendChild(eventDiv);
     }
 
@@ -72,5 +83,11 @@ document.addEventListener("DOMContentLoaded", function() {
         const date = this.getAttribute('data-date');
         console.log('Żądanie wydarzeń dla następnej daty:', date);
         ws.send(JSON.stringify({ date: date }));
+    });
+
+    // Obsługa kliknięcia przycisku "Back to Today"
+    document.getElementById('back-to-today').addEventListener('click', function() {
+        const today = new Date().toISOString().split('T')[0];
+        ws.send(JSON.stringify({ date: today }));
     });
 });
