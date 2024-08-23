@@ -41,8 +41,6 @@ AUTH_USER_MODEL = 'Tennis.CustomUser'
 # Application definition
 
 INSTALLED_APPS = [
-    "daphne",
-    'channels',
     'Tennis.apps.TennisConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -54,14 +52,6 @@ INSTALLED_APPS = [
     'fontawesomefree',
     'django_select2',
 ]
-
-ASGI_APPLICATION = 'Tennis_training_system.asgi.application'
-
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

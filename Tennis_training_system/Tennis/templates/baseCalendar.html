@@ -23,8 +23,6 @@
     {% endblock %}
 </head>
 <body>
-    {% block day %}
-    {% endblock %}
     <form class="new-event-form" id="game_form" method="POST">
         {% csrf_token %}
         {% if game_form %}
@@ -105,17 +103,10 @@
             </form>
         </div>
     </section>
+    {% block day %}
+    {% endblock %}
+    <script src="{% static 'JS/createNewEvent.js' %}"></script>
+    <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
+    <script src="{% static 'JS/events.js' %}"></script>
 </body>
-<script src="{% static 'JS/createNewEvent.js' %}"></script>
-<script>
-    document.getElementById("id_recurrence_type").addEventListener("change", function() {
-        var recurrenceType = this.value;
-        var recurrenceEndDate = document.getElementById("recurrence-end-date");
-        if (recurrenceType && recurrenceType !== 'None') {
-            recurrenceEndDate.style.display = "block";
-        } else {
-            recurrenceEndDate.style.display = "none";
-        }
-    });
-</script>
 </html>
