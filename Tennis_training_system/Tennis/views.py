@@ -75,19 +75,15 @@ class DayView(LoginRequiredMixin, TemplateView):
         }
 
     def get(self, request, *args, **kwargs):
-        print("Request headers:", request.headers)
         if self.is_ajax(request):
             date_str = request.GET.get('date')
             date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else now().date()
             events, date_info = self.get_events_and_date_info(date)
-            print("Events to be sent:", events)
-            print("Date info to be sent:", date_info)
             return JsonResponse({
                 'events': events,
                 **date_info,
             })
         else:
-            print("Non-AJAX request received, rendering full HTML.")
             return super().get(request, *args, **kwargs)
 
     def is_ajax(self, request):
@@ -100,7 +96,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         )
 
         events = list(events_query)
-        print(f"Fetched events for {date}: {events}")
 
         for event in events:
             event['start_date_and_time'] = event['start_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
@@ -119,7 +114,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             'next_date': (date + timedelta(days=1)).strftime('%Y-%m-%d'),
         }
 
-        print(f"Returning date info: {date_info}")
         return events, date_info
 
     def convert_string_time_to_minutes(self, time_str):
@@ -127,142 +121,53 @@ class DayView(LoginRequiredMixin, TemplateView):
         return hours * 60 + minutes
 
     def post(self, request, *args, **kwargs):
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        print("Received POST request.")
+        if self.is_ajax(request):
+            print("AJAX request detected.")
+            print("POST data:", request.POST)
             if 'submit_game' in request.POST:
+                print("Handling game form.")
                 return self.handle_game_form(request)
 
             if 'submit_court' in request.POST:
+                print("Handling court form.")
                 return self.handle_court_form(request)
 
             if 'submit_category' in request.POST:
+                print("Handling category form.")
                 return self.handle_category_form(request)
 
+        print("Invalid request.")
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
     def handle_game_form(self, request):
         game_form = GameForm(request.POST)
         if game_form.is_valid():
-            self.save_game(game_form)
+            game = game_form.save(commit=False)
+            game.creator = self.request.user
+            game.save()
             return JsonResponse({'success': True, 'message': 'Game added successfully'})
-        return JsonResponse({'success': False, 'errors': game_form.errors})
+        return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
     def handle_court_form(self, request):
         court_form = CourtForm(request.POST)
         if court_form.is_valid():
             court_form.save()
+            print("Court added successfully")
             return JsonResponse({'success': True, 'message': 'Court added successfully'})
-        return JsonResponse({'success': False, 'errors': court_form.errors})
+        # Correct use of .as_json() on court_form.errors
+        print(court_form.errors)
+        return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
 
     def handle_category_form(self, request):
         category_form = CategoryForm(request.POST)
         if category_form.is_valid():
             category_form.save()
+            print("Category added successfully")
             return JsonResponse({'success': True, 'message': 'Category added successfully'})
-        return JsonResponse({'success': False, 'errors': category_form.errors})
-
-    def save_game(self, game_form):
-        game = game_form.save(commit=False)
-        game.creator = self.request.user
-        game.save()
-        return game
-
-    # def post(self, request, *args, **kwargs):
-    #     logger.info("Received POST request.")
-    #     game_form = GameForm(request.POST)
-    #     court_form = CourtForm(request.POST)
-    #     category_form = CategoryForm(request.POST)
-    #
-    #     if 'submit_game' in request.POST:
-    #         return self.handle_game_form(game_form)
-    #
-    #     if 'submit_court' in request.POST and court_form.is_valid():
-    #         court_form.save()
-    #         logger.info("Court created successfully.")
-    #         return redirect('day')
-    #
-    #     if 'submit_category' in request.POST and category_form.is_valid():
-    #         category_form.save()
-    #         logger.info("Category created successfully.")
-    #         return redirect('day')
-    #
-    #     return self.form_invalid_response(game_form, court_form, category_form)
-    #
-    # def handle_game_form(self, game_form):
-    #     if game_form.is_valid():
-    #         game = self.save_game(game_form)
-    #         if game.group:
-    #             self.handle_recurring_events(game)
-    #         return redirect('day')
-    #     else:
-    #         logger.error(f"Game form is invalid. Errors: {game_form.errors}")
-    #         return self.form_invalid_response(game_form)
-    #
-    # def save_game(self, game_form):
-    #     game = game_form.save(commit=False)
-    #     game.creator = self.request.user
-    #     game.save()
-    #     logger.info(f"Game saved with id: {game.game_id}")
-    #     return game
-    #
-    # def handle_recurring_events(self, game):
-    #     if not game.group:
-    #         print(f"Game {game.name} does not have a group set for recurrence.")
-    #         return
-    #
-    #     recurrence_type = game.group.recurrence_type
-    #     delta = self.get_recurrence_delta(recurrence_type)
-    #
-    #     if delta is None:
-    #         print(f"Delta is None: {recurrence_type}")
-    #         return
-    #
-    #     if delta:
-    #         # Konwersja end_date na datetime z godziną 23:59
-    #         recurrence_end_datetime = datetime.combine(game.group.end_date, time(23, 59))
-    #         recurrence_end_datetime = make_aware(recurrence_end_datetime)
-    #         current_start_date = game.start_date_and_time + delta
-    #         current_end_date = game.end_date_and_time + delta
-    #
-    #         print(f"Creating recurring events for game {game.name} with recurrence type {recurrence_type}.")
-    #         print(f"Initial event start: {game.start_date_and_time}, end: {game.end_date_and_time}")
-    #
-    #         while current_start_date <= recurrence_end_datetime:
-    #             print(f"Creating event on {current_start_date} to {current_end_date}")
-    #             Game.objects.create(
-    #                 name=game.name,
-    #                 category=game.category,
-    #                 court=game.court,
-    #                 start_date_and_time=current_start_date,
-    #                 end_date_and_time=current_end_date,
-    #                 group=game.group,
-    #                 creator=self.request.user
-    #             )
-    #             current_start_date += delta
-    #             current_end_date += delta
-    #
-    # def get_recurrence_delta(self, recurrence_type):
-    #     if recurrence_type == 'daily':
-    #         return timedelta(days=1)
-    #     elif recurrence_type == 'weekly':
-    #         return timedelta(weeks=1)
-    #     elif recurrence_type == 'biweekly':
-    #         return timedelta(weeks=2)
-    #     elif recurrence_type == 'monthly':
-    #         return relativedelta(months=1)
-    #     else:
-    #         print(f"Unrecognized recurrence type: {recurrence_type}")
-    #     return None
-    #
-    # def form_invalid_response(self, game_form, court_form=None, category_form=None):
-    #     context = self.get_context_data()
-    #     context.update({'game_form': game_form})
-    #     if self.request.user.is_staff:
-    #         context.update({
-    #             'court_form': court_form or CourtForm(),
-    #             'category_form': category_form or CategoryForm(),
-    #         })
-    #     logger.error("Form submission failed.")
-    #     return render(self.request, self.template_name, context)
+        # Correct use of .as_json() on category_form.errors
+        print(category_form.errors)
+        return JsonResponse({'success': False, 'errors': category_form.errors.as_json()}, status=400)
 
 
 class WeekView(LoginRequiredMixin, TemplateView):

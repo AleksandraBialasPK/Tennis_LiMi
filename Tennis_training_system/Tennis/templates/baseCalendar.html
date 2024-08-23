@@ -1,6 +1,6 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="pl">
+{% load static %}
 
 <head>
     <meta charset="UTF-8">
@@ -23,36 +23,6 @@
     {% endblock %}
 </head>
 <body>
-    <form class="new-event-form" id="game_form" method="POST">
-        {% csrf_token %}
-        {% if game_form %}
-            {% for field in game_form %}
-                <div class="add-event-form-divs">
-                    {{ field.label_tag }} {{ field }}
-                    {% if field.help_text %}
-                        <span class="help-text">{{ field.help_text }}</span>
-                    {% endif %}
-                    {% for error in field.errors %}
-                        <div class="error">{{ error }}</div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>Formularz nie został przekazany.</p>
-        {% endif %}
-         <div id="recurrence-end-date" style="display: none;">
-            {{ game_form.end_date_of_recurrence.label_tag }} {{ game_form.end_date_of_recurrence }}
-        </div>
-        <button type="submit" name="submit_game">Add</button>
-    </form>
-    <script>
-        (function($) {
-            $(document).ready(function() {
-                $('.django-select2').djangoSelect2();
-            });
-        })(jQuery);
-    </script>
-
     <section class="sidebar-nav">
         <div class="navigation">
             <div class="views-nav">
@@ -64,23 +34,53 @@
                 <label for="Game"><input type="checkbox" class="checkbox-event Game" id="Game" name="Game" checked>Game</label>
             </div>
             <div class="create-new-stuff-buttons">
-                <button class="create-new-event-button" id="create-new-event-button" type="button">Add a new game</button>
+                <button class="create-new-event-button" id="create-new-game-button" type="button">Add a new game</button>
                 {% if request.user.is_staff %}
                 <button class="create-new-event-button" id="add-new-court-button" type="button">Add a new court</button>
                 <button class="create-new-event-button" id="create-new-category-button" type="button">Add a new category</button>
                 {% endif %}
             </div>
         </div>
+        <form class="new-event-form" id="game_form" method="POST">
+            {% csrf_token %}
+            {% if game_form %}
+                {% for field in game_form %}
+                    <div class="add-event-form-divs">
+                        {{ field.label_tag }} {{ field }}
+                        {% if field.help_text %}
+                            <span class="help-text">{{ field.help_text }}</span>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Formularz nie został przekazany.</p>
+            {% endif %}
+             <div id="recurrence-end-date" style="display: none;">
+                {{ game_form.end_date_of_recurrence.label_tag }} {{ game_form.end_date_of_recurrence }}
+            </div>
+            <button type="submit" name="submit_game">Add</button>
+        </form>
+        <script>
+            (function($) {
+                $(document).ready(function() {
+                    $('.django-select2').djangoSelect2();
+                });
+            })(jQuery);
+        </script>
+
         {% if request.user.is_staff %}
             <form class="new-event-form" id="court_form" method="POST">
                 {% csrf_token %}
                 {{ court_form.as_p }}
-                <button type="submit" name="submit_court">Add Court</button>
+                <button type="submit" name="submit_category" value="true">Add Court</button>
             </form>
             <form class="new-event-form" id="category_form" method="POST">
                 {% csrf_token %}
                 {{ category_form.as_p }}
-                <button type="submit" name="submit_category">Add Category</button>
+                <button type="submit" name="submit_category" value="true">Add Category</button>
             </form>
         {% endif %}
         <div class="settings-and-logout">
