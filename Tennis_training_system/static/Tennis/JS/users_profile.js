@@ -9,13 +9,13 @@ document.addEventListener("DOMContentLoaded", function() {
             const reader = new FileReader();
 
             reader.onload = function(e) {
-                avatarImage.src = e.target.result; // Update the src of the avatar image
-                console.log("Profile picture updated in the preview."); // Log for debugging
+                avatarImage.src = e.target.result;
+                console.log("Profile picture updated in the preview.");
             };
 
-            reader.readAsDataURL(file); // Read the file as a data URL
+            reader.readAsDataURL(file);
         } else {
-            console.log("No file selected or file input change event not triggered."); // Log for debugging
+            console.log("No file selected or file input change event not triggered.");
         }
     });
 });

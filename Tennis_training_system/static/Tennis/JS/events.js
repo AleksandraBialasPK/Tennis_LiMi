@@ -77,7 +77,7 @@ function appendEvent(event) {
     eventDiv.innerHTML = `
         <div class="side-color side-color-${event.category__name}">
             <div class="picture-for-event">
-                <img src="{% static 'images/Ola.png' %}" alt="user's profile picture"/>
+                <img src="{% if request.user.profile_picture %}{{ MEDIA_URL }}{{ request.user.profile_picture }}{% else %}{% static 'images/Ola.png' %}{% endif %}" alt="User's Profile Picture">
             </div>
         </div>
         <div class="event-desc">
@@ -88,3 +88,9 @@ function appendEvent(event) {
 
     eventsDiv.appendChild(eventDiv);
 }
+
+const intervalTime = 10000;
+setInterval(function() {
+    const currentDate = new Date().toISOString().split('T')[0];
+    loadEvents(currentDate);
+}, intervalTime);
