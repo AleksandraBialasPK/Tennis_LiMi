@@ -1,22 +1,23 @@
-from django.contrib.auth import authenticate, login
+import os
+
+from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.utils.timezone import now, make_aware
+from django.utils.timezone import now
+
+from Tennis_training_system import settings
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.utils.translation import gettext_lazy as _
-from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm
+from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
 from django.views.generic import FormView, ListView, TemplateView, CreateView, View
-from .models import Game, RecurringGroup, Participant, Category, Court
+from .models import Game
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from datetime import timedelta, datetime, date, time
-from dateutil.relativedelta import relativedelta
+from datetime import timedelta, datetime
 from django.http import JsonResponse
-from django.template.loader import render_to_string
 import logging
-from django.views.decorators.http import require_GET
-from django.utils.decorators import method_decorator
+
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,73 @@ class DayView(LoginRequiredMixin, TemplateView):
         print(category_form.errors)
         return JsonResponse({'success': False, 'errors': category_form.errors.as_json()}, status=400)
 
+
+class UsersProfile(LoginRequiredMixin, View):
+    template_name = 'users_profile.html'
+
+    def get(self, request):
+        # Instantiate forms
+        profile_form = ProfilePictureUpdateForm()
+        password_form = CustomPasswordChangeForm(user=request.user)
+
+        context = {
+            'profile_form': profile_form,
+            'password_form': password_form,
+            'MEDIA_URL': settings.MEDIA_URL,
+        }
+        return render(request, self.template_name, context)
+
+    def save_profile_picture(self, profile_picture):
+        # Define the path where the file will be saved
+        file_name = profile_picture.name
+        file_path = os.path.join('profile_pictures', file_name)
+        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+        # Save the file to the specified path
+        with open(full_path, 'wb+') as destination:
+            for chunk in profile_picture.chunks():
+                destination.write(chunk)
+
+        return file_path
+
+    def post(self, request):
+        if 'profile_picture' in request.FILES:
+            # Handling profile picture update
+            print("this is the first if in the loop")
+            profile_form = ProfilePictureUpdateForm(request.POST, request.FILES)
+            if profile_form.is_valid():
+                # Save the profile picture and update the path in the user profile
+                print("profile form is valid")
+                profile_picture = profile_form.cleaned_data['profile_picture']
+                file_path = self.save_profile_picture(profile_picture)
+                request.user.profile_picture = file_path
+                request.user.save()
+                messages.success(request, 'Your profile picture has been updated.')
+            else:
+                messages.error(request, 'There has been an error while updating the profile picture.')
+                print("Profile form errors:", profile_form.errors)
+
+        elif 'old_password' in request.POST:
+            # Handling password change
+            password_form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)  # Important! Keeps the user logged in
+                messages.success(request, 'Your password has been updated.')
+            else:
+                messages.error(request, 'Please correct the error below.')
+
+        # Re-render the forms
+        profile_form = ProfilePictureUpdateForm()
+        password_form = CustomPasswordChangeForm(user=request.user)
+
+        context = {
+            'profile_form': profile_form,
+            'password_form': password_form,
+        }
+        return render(request, self.template_name, context)
 
 class WeekView(LoginRequiredMixin, TemplateView):
     template_name = 'week.html'

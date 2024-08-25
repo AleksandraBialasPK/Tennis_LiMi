@@ -5,6 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Game, Category, Court, RecurringGroup, RECURRENCE_CHOICES
 from django.contrib.auth.forms import AuthenticationForm
 from django_select2.forms import ModelSelect2MultipleWidget, ModelSelect2Widget
+from django.contrib.auth.forms import PasswordChangeForm
 from django.core.validators import EmailValidator
 import logging
 
@@ -87,3 +88,12 @@ class EmailAuthenticationForm(AuthenticationForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
 
+
+class ProfilePictureUpdateForm(forms.Form):
+    profile_picture = forms.ImageField(required=False)
+
+
+class CustomPasswordChangeForm(PasswordChangeForm):
+    class Meta:
+        model = CustomUser
+        fields = ['old_password', 'new_password1', 'new_password2']

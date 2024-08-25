@@ -87,7 +87,7 @@
             <div class="events">
                 <div class="person" id="person_1">
                     <div class="avatar">
-                        <img src="{% static 'images/Ola.png' %}" alt="Ola picture">
+                        <img id="avatar-image" src="{% if request.user.profile_picture %}{{ MEDIA_URL }}{{ request.user.profile_picture }}{% else %}{% static 'images/Ola.png' %}{% endif %}" alt="User's Profile Picture">
                     </div>
                 </div>
                 <div class="nickname">
@@ -95,7 +95,7 @@
                 </div>
             </div>
             <div>
-                <button class="not-enhanced-buttons" type="button">Settings</button>
+                <a href="{% url 'users_profile' %}" class="not-enhanced-buttons">Settings</a>
             </div>
             <form action="{% url 'logout' %}" method="post">
                 {% csrf_token %}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pl">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'CSS/users_profile.css' %}">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/favicon.svg' %}">
+    <title>User's Profile</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <button class="back-to-dashboard" onclick="window.location.href='{% url 'day' %}'">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <section class="profile-section">
+            <div class="avatar" onclick="document.getElementById('id_profile_picture').click();">
+                <img id="avatar-image" src="{% if request.user.profile_picture %}{{ MEDIA_URL }}{{ request.user.profile_picture }}{% else %}{% static 'images/Ola.png' %}{% endif %}" alt="User's Profile Picture">
+            </div>
+
+            <div class="nickname">
+                <span class="name">{{ request.user.username }}</span>
+            </div>
+
+            <form class="profile-form" id="profile_form" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_profile_picture">Profile Picture:</label>
+                    {{ profile_form.profile_picture }}
+                    {% if profile_form.profile_picture.help_text %}
+                        <span class="help-text">{{ profile_form.profile_picture.help_text }}</span>
+                    {% endif %}
+                    {% for error in profile_form.profile_picture.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="submit-button users-profile-button">Update profile picture</button>
+            </form>
+
+
+            <form class="profile-form" id="password_form" method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    {{ password_form.old_password.label_tag }} {{ password_form.old_password }}
+                    {% for error in password_form.old_password.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ password_form.new_password1.label_tag }} {{ password_form.new_password1 }}
+                    {% for error in password_form.new_password1.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ password_form.new_password2.label_tag }} {{ password_form.new_password2 }}
+                    {% for error in password_form.new_password2.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="submit-button users-profile-button">Change Password</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="{% static 'JS/users_profile.js' %}"></script>
+    <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
+</body>
+</html>
