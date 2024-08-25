@@ -74,10 +74,12 @@ function appendEvent(event) {
     eventDiv.style.marginTop = `${event.margin_top}px`;
     eventDiv.style.height = `${event.height}px`;
 
+    const profilePictureUrl = event.profile_picture_url;
+
     eventDiv.innerHTML = `
         <div class="side-color side-color-${event.category__name}">
             <div class="picture-for-event">
-                <img src="{% if request.user.profile_picture %}{{ MEDIA_URL }}{{ request.user.profile_picture }}{% else %}{% static 'images/Ola.png' %}{% endif %}" alt="User's Profile Picture">
+                <img src="${profilePictureUrl}" alt="User's Profile Picture">
             </div>
         </div>
         <div class="event-desc">

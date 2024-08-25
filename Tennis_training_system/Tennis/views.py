@@ -93,7 +93,7 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     def get_events_and_date_info(self, date):
         events_query = Game.objects.filter(start_date_and_time__date=date).values(
-            'name', 'category__name', 'start_date_and_time', 'end_date_and_time'
+            'name', 'category__name', 'start_date_and_time', 'end_date_and_time', 'creator__profile_picture'
         )
 
         events = list(events_query)
@@ -108,6 +108,12 @@ class DayView(LoginRequiredMixin, TemplateView):
             duration = end_time_minutes - start_time_minutes
             event['margin_top'] = (start_time_minutes / 60) * 100
             event['height'] = (duration / 60) * 100
+
+            profile_picture = event.get('creator__profile_picture', '')
+            if profile_picture:
+                event['profile_picture_url'] = f"{settings.MEDIA_URL}{profile_picture}"
+            else:
+                event['profile_picture_url'] = settings.STATIC_URL + 'images/Ola.png'
 
         date_info = {
             'current_date': date.strftime('%d %B %Y'),

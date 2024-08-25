@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
     const fileInput = document.getElementById('id_profile_picture');
     const avatarImage = document.getElementById('avatar-image');
+    const profileForm = document.getElementById('profile_form');
 
     // Listen for changes on the file input
     fileInput.addEventListener('change', function(event) {
@@ -14,6 +15,9 @@ document.addEventListener("DOMContentLoaded", function() {
             };
 
             reader.readAsDataURL(file);
+
+            // Automatically submit the form
+            profileForm.submit();
         } else {
             console.log("No file selected or file input change event not triggered.");
         }

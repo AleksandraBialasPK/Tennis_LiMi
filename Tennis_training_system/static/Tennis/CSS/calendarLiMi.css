@@ -19,7 +19,7 @@ body {
     position: relative;
     z-index: 2;
     display: grid;
-    grid-template-rows: 3fr 1fr;
+    grid-template-rows: 3fr 2fr;
     padding: 20px 24px 20px;
     gap: 20px;
     float: right;
@@ -35,6 +35,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: 15px;
 }
 
 .navigation {
@@ -86,6 +87,9 @@ body {
 .not-enhanced-buttons {
     min-width: 30%;
     background: none;
+    text-underline: none;
+    text-decoration: none;
+    outline: none;
     color: #515151;
     border: none;
     cursor: pointer;
@@ -101,8 +105,8 @@ body {
 }
 
 .avatar {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 80px;
     background-color: white;
     border-radius: 50%;
     vertical-align: middle;
@@ -113,8 +117,8 @@ body {
 }
 
 .avatar>img {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 80px;
     background-size: cover;
     background-position: top center;
     border-radius: 50%;
@@ -641,6 +645,11 @@ header > nav {
     display: flex;
     align-items: flex-end;
     justify-content: flex-end;
+}
+
+a {
+    text-decoration: none;
+    outline: none;
 }
 
 .logout-mobile {
