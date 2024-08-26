@@ -1,23 +1,33 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // Declare the selectedDate variable to store the current date being viewed
+    let selectedDate = new Date().toISOString().split('T')[0];
+
     // Initial load for today's events using AJAX
-    const today = new Date().toISOString().split('T')[0];
-    loadEvents(today);
+    loadEvents(selectedDate);
 
     // Handle date navigation buttons
     document.querySelector('.prev-day-btn').addEventListener('click', function() {
         const date = this.getAttribute('data-date');
+        selectedDate = date; // Update the selected date
         loadEvents(date);
     });
 
     document.querySelector('.next-day-btn').addEventListener('click', function() {
         const date = this.getAttribute('data-date');
+        selectedDate = date; // Update the selected date
         loadEvents(date);
     });
 
     // Handle "Back to Today" button
     document.getElementById('back-to-today').addEventListener('click', function() {
-        loadEvents(today);
+        selectedDate = new Date().toISOString().split('T')[0]; // Reset to today's date
+        loadEvents(selectedDate);
     });
+
+    const intervalTime = 10000; // 10 seconds
+    setInterval(function() {
+        loadEvents(selectedDate); // Use the selected date
+    }, intervalTime);
 });
 
 // Function to load events based on the given date
@@ -90,9 +100,3 @@ function appendEvent(event) {
 
     eventsDiv.appendChild(eventDiv);
 }
-
-const intervalTime = 10000;
-setInterval(function() {
-    const currentDate = new Date().toISOString().split('T')[0];
-    loadEvents(currentDate);
-}, intervalTime);
