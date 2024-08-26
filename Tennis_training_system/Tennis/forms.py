@@ -24,9 +24,17 @@ class ParticipantsWidget(ModelSelect2MultipleWidget):
 
 
 class GameForm(forms.ModelForm):
-    recurrence_type = forms.ChoiceField(choices=RECURRENCE_CHOICES, required=False, label="Recurrence Type")
-    end_date_of_recurrence = forms.DateField(required=False, label="End Date of Recurrence",
-                                             widget=forms.DateInput(attrs={'type': 'date'}))
+    recurrence_type = forms.ChoiceField(
+        choices=RECURRENCE_CHOICES,
+        required=False,
+        label="Recurrence Type",
+        widget=forms.Select(attrs={'id': 'id_recurrence_type'})
+    )
+    end_date_of_recurrence = forms.DateField(
+        required=False,
+        label="End Date of Recurrence",
+        widget=forms.DateInput(attrs={'type': 'date', 'id': 'id_end_date_of_recurrence'})
+    )
 
     class Meta:
         model = Game

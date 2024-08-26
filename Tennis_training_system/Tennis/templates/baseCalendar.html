@@ -45,6 +45,7 @@
             {% csrf_token %}
             {% if game_form %}
                 {% for field in game_form %}
+                    {% if field.name != 'end_date_of_recurrence' %}
                     <div class="add-event-form-divs">
                         {{ field.label_tag }} {{ field }}
                         {% if field.help_text %}
@@ -54,22 +55,16 @@
                             <div class="error">{{ error }}</div>
                         {% endfor %}
                     </div>
+                    {% endif %}
                 {% endfor %}
             {% else %}
                 <p>Formularz nie został przekazany.</p>
             {% endif %}
-             <div id="recurrence-end-date" style="display: none;">
+            <div id="recurrence-end-date" style="display: none;">
                 {{ game_form.end_date_of_recurrence.label_tag }} {{ game_form.end_date_of_recurrence }}
             </div>
             <button type="submit" name="submit_game">Add</button>
         </form>
-        <script>
-            (function($) {
-                $(document).ready(function() {
-                    $('.django-select2').djangoSelect2();
-                });
-            })(jQuery);
-        </script>
 
         {% if request.user.is_staff %}
             <form class="new-event-form" id="court_form" method="POST">

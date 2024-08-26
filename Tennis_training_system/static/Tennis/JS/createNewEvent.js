@@ -83,3 +83,28 @@ function handleFormSubmission(form, successMessage, buttonName) {
 handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
 handleFormSubmission(document.getElementById('court_form'), 'Court added successfully!', 'submit_court');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
+
+(function($) {
+    $(document).ready(function() {
+        $('.django-select2').djangoSelect2();
+
+        // Event listener for recurrence type change
+        $('#id_recurrence_type').change(function() {
+            const recurrenceType = $(this).val();
+            if (recurrenceType) {
+                $('#recurrence-end-date').show();
+            } else {
+                $('#recurrence-end-date').hide();
+                $('#id_end_date_of_recurrence').val(''); // Clear the value when hiding
+            }
+        });
+
+        // Initialize visibility based on the current selection
+        const initialRecurrenceType = $('#id_recurrence_type').val();
+        if (initialRecurrenceType) {
+            $('#recurrence-end-date').show();
+        } else {
+            $('#recurrence-end-date').hide();
+        }
+    });
+})(jQuery);
