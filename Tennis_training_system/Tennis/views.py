@@ -1,10 +1,8 @@
 import os
-
 from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.utils.timezone import now
-
 from Tennis_training_system import settings
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
@@ -12,7 +10,7 @@ from django.contrib.auth.views import LoginView
 from django.utils.translation import gettext_lazy as _
 from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
 from django.views.generic import FormView, ListView, TemplateView, CreateView, View
-from .models import Game
+from .models import Game, Category
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from datetime import timedelta, datetime
 from django.http import JsonResponse
@@ -67,6 +65,7 @@ class DayView(LoginRequiredMixin, TemplateView):
             'hours': range(1, 24),
             'breaklines': range(23),
             'game_form': GameForm(),
+            'categories': Category.objects.all(),
         }
 
     def get_staff_context(self):
@@ -93,7 +92,7 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     def get_events_and_date_info(self, date):
         events_query = Game.objects.filter(start_date_and_time__date=date).values(
-            'name', 'category__name', 'start_date_and_time', 'end_date_and_time', 'creator__profile_picture'
+            'name', 'category__name', 'category__color', 'start_date_and_time', 'end_date_and_time', 'creator__profile_picture'
         )
 
         events = list(events_query)

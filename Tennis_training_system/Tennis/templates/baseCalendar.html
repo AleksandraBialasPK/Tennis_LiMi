@@ -30,8 +30,20 @@
                 {% endblock %}
             </div>
             <div class="events">
-                <label for="Training"><input type="checkbox" class="checkbox-event Training" id="Training" name="Training" checked>Training</label>
-                <label for="Game"><input type="checkbox" class="checkbox-event Game" id="Game" name="Game" checked>Game</label>
+                {% for category in categories %}
+                <label for="{{ category.name|slugify }}">
+                    <input type="checkbox"
+                           class="checkbox-event"
+                           id="{{ category.name|slugify }}"
+                           name="{{ category.name|slugify }}"
+                           checked
+                           data-color="{{ category.color }}"
+                           style="border-color: {{ category.color }};
+                                  background-color: rgba({{ category.color|slice:':3'|add:',0.3' }});
+                                  ">
+                    {{ category.name }}
+                </label>
+                {% endfor %}
             </div>
             <div class="create-new-stuff-buttons">
                 <button class="create-new-event-button" id="create-new-game-button" type="button">Add a new game</button>

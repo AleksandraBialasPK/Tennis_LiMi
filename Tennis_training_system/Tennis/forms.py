@@ -76,7 +76,7 @@ class GameForm(forms.ModelForm):
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
-        fields = ['name']
+        fields = ['name', 'color']
 
 
 class CourtForm(forms.ModelForm):
