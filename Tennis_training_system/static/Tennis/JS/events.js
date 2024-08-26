@@ -24,6 +24,12 @@ document.addEventListener("DOMContentLoaded", function() {
         loadEvents(selectedDate);
     });
 
+    document.querySelectorAll('.checkbox-event').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            filterEvents();
+        });
+    });
+
     const intervalTime = 10000; // 10 seconds
     setInterval(function() {
         loadEvents(selectedDate); // Use the selected date
@@ -80,7 +86,7 @@ function appendEvent(event) {
     const eventsDiv = document.getElementById("events");
     const eventDiv = document.createElement("div");
 
-    eventDiv.className = `event-tile`;
+    eventDiv.className = `event-tile event-tile-${event.category__name}`;
     eventDiv.style.marginTop = `${event.margin_top}px`;
     eventDiv.style.height = `${event.height}px`;
 
@@ -136,3 +142,25 @@ document.addEventListener("DOMContentLoaded", function() {
         checkbox.dispatchEvent(new Event('change'));
     });
 });
+
+function filterEvents() {
+    const checkedCategories = Array.from(document.querySelectorAll('.checkbox-event:checked')).map(checkbox => checkbox.id);
+    console.log('Checked Categories:', checkedCategories);
+
+    const eventTiles = document.querySelectorAll('.event-tile');
+
+    eventTiles.forEach(tile => {
+        const categoryClass = Array.from(tile.classList).find(cls => cls.startsWith('event-tile-'));
+
+        if (categoryClass) {
+            const category = categoryClass.replace('event-tile-', '');
+            console.log('Event Category:', category);
+
+            if (checkedCategories.includes(category)) {
+                tile.style.display = 'flex';
+            } else {
+                tile.style.display = 'none';
+            }
+        }
+    });
+}

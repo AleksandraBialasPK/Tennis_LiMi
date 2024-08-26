@@ -31,11 +31,11 @@
             </div>
             <div class="events">
                 {% for category in categories %}
-                <label for="{{ category.name|slugify }}">
+                <label for="{{ category.name }}">
                     <input type="checkbox"
                            class="checkbox-event"
-                           id="{{ category.name|slugify }}"
-                           name="{{ category.name|slugify }}"
+                           id="{{ category.name }}"
+                           name="{{ category.name }}"
                            checked
                            data-color="{{ category.color }}"
                            style="border-color: {{ category.color }};
