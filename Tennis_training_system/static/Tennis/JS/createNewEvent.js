@@ -16,11 +16,13 @@ function toggleForm(form, button) {
                 outsideOfForm.addEventListener('click', function hideForm(event) {
                     if (!form.contains(event.target) && event.target !== button) {
                         form.style.display = 'none';
+                        form.reset();
                         outsideOfForm.removeEventListener('click', hideForm);
                     }
                 });
             } else {
                 form.style.display = 'none';
+                form.reset();
             }
         });
     } else {
@@ -38,7 +40,6 @@ function handleFormSubmission(form, successMessage, buttonName) {
         event.preventDefault();
         let formData = new FormData(this);
 
-        // Append button name to the formData
         formData.append(buttonName, 'true');
 
         fetch(window.location.href, {
@@ -50,7 +51,6 @@ function handleFormSubmission(form, successMessage, buttonName) {
             body: formData,
         })
         .then(response => {
-            // Check if the response is okay
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
@@ -60,8 +60,8 @@ function handleFormSubmission(form, successMessage, buttonName) {
             if (data.success) {
                 alert(successMessage);
                 form.reset();
+                form.style.display = 'none';
             } else {
-                // Check if errors are present and display them
                 if (data.errors) {
                     let errorMessages = '';
                     for (let field in data.errors) {
@@ -75,7 +75,7 @@ function handleFormSubmission(form, successMessage, buttonName) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Failed: An unexpected error occurred.'); // Display more specific error message
+            alert('Failed: An unexpected error occurred.');
         });
     });
 }
@@ -95,7 +95,7 @@ handleFormSubmission(document.getElementById('category_form'), 'Category added s
                 $('#recurrence-end-date').show();
             } else {
                 $('#recurrence-end-date').hide();
-                $('#id_end_date_of_recurrence').val(''); // Clear the value when hiding
+                $('#id_end_date_of_recurrence').val('');
             }
         });
 
