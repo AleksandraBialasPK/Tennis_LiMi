@@ -6,7 +6,7 @@ from django.utils.timezone import now
 from Tennis_training_system import settings
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, LogoutView
 from django.utils.translation import gettext_lazy as _
 from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
 from django.views.generic import FormView, ListView, TemplateView, CreateView, View
@@ -31,22 +31,34 @@ class RegisterView(FormView):
         return super().form_valid(form)
 
 
-class CustomLoginView(LoginView):
-    template_name = 'login.html'
+class CustomLoginView(FormView):
     form_class = EmailAuthenticationForm
+    template_name = 'login.html'
     success_url = reverse_lazy('day')
 
     def form_valid(self, form):
         email = form.cleaned_data.get('username')
         password = form.cleaned_data.get('password')
         user = authenticate(username=email, password=password)
+
         if user is not None:
             login(self.request, user)
-            messages.info(self.request, _(f"You are now logged in as {email}."))
-            return redirect(self.success_url)
+            return redirect(self.get_success_url())
         else:
-            messages.error(self.request, _("Invalid email or password."))
+            messages.error(self.request, 'Invalid email or password.')
             return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Invalid email or password.')
+        return super().form_invalid(form)
+
+
+class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy('login')
+
+    def dispatch(self, request, *args, **kwargs):
+        messages.success(request, "You have successfully logged out.")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class DayView(LoginRequiredMixin, TemplateView):

@@ -31,12 +31,14 @@
             <a href="{% url 'register' %}" class="login-or-sign-up">Sign up</a>
         </div>
     </form>
-    {% if messages %}
-        <ul class="messages">
+   {% if messages %}
+        <ul class="messages" id="login-messages">
         {% for message in messages %}
             <li class="{{ message.tags }}">{{ message }}</li>
         {% endfor %}
         </ul>
+    {% else %}
+        <ul class="messages" id="login-messages"></ul>
     {% endif %}
 {% endblock %}
 
