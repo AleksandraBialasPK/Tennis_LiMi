@@ -35,6 +35,12 @@ class CustomLoginView(FormView):
     form_class = EmailAuthenticationForm
     template_name = 'login.html'
     success_url = reverse_lazy('day')
+    redirect_authenticated_user = True
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(self.success_url)
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         email = form.cleaned_data.get('username')
