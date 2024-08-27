@@ -151,23 +151,16 @@ class DayView(LoginRequiredMixin, TemplateView):
         return hours * 60 + minutes
 
     def post(self, request, *args, **kwargs):
-        print("Received POST request.")
         if self.is_ajax(request):
-            print("AJAX request detected.")
-            print("POST data:", request.POST)
             if 'submit_game' in request.POST:
-                print("Handling game form.")
                 return self.handle_game_form(request)
 
             if 'submit_court' in request.POST:
-                print("Handling court form.")
                 return self.handle_court_form(request)
 
             if 'submit_category' in request.POST:
-                print("Handling category form.")
                 return self.handle_category_form(request)
 
-        print("Invalid request.")
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
     def handle_game_form(self, request):
@@ -176,16 +169,51 @@ class DayView(LoginRequiredMixin, TemplateView):
             game = game_form.save(commit=False)
             game.creator = self.request.user
             game.save()
-            # Retrieve the participants from the cleaned data
+
             participants = game_form.cleaned_data.get('participants', [])
 
-            # Associate participants with the game
             for user in participants:
                 Participant.objects.create(user=user, game=game)
 
-            # If using a many-to-many relationship in the form, call save_m2m
-            game_form.save_m2m()  # Save the many-to-many relationships
+            game_form.save_m2m()
+
+            recurrence_type = game_form.cleaned_data.get('recurrence_type')
+            end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
+
+            if recurrence_type and end_date_of_recurrence:
+                current_start = game.start_date_and_time
+                current_end = game.end_date_and_time
+
+                while current_start.date() <= end_date_of_recurrence:
+                    if current_start != game.start_date_and_time:
+                        new_game = Game.objects.create(
+                            name=game.name,
+                            category=game.category,
+                            court=game.court,
+                            creator=game.creator,
+                            start_date_and_time=current_start,
+                            end_date_and_time=current_end,
+                            group=game.group
+                        )
+
+                        for user in participants:
+                            Participant.objects.create(user=user, game=new_game)
+
+                    if recurrence_type == 'daily':
+                        current_start += timedelta(days=1)
+                        current_end += timedelta(days=1)
+                    elif recurrence_type == 'weekly':
+                        current_start += timedelta(weeks=1)
+                        current_end += timedelta(weeks=1)
+                    elif recurrence_type == 'biweekly':
+                        current_start += timedelta(weeks=2)
+                        current_end += timedelta(weeks=2)
+                    elif recurrence_type == 'monthly':
+                        current_start = current_start.replace(month=current_start.month + 1)
+                        current_end = current_end.replace(month=current_end.month + 1)
+
             return JsonResponse({'success': True, 'message': 'Game added successfully'})
+
         return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
     def handle_court_form(self, request):
