@@ -10,7 +10,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.utils.translation import gettext_lazy as _
 from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
 from django.views.generic import FormView, ListView, TemplateView, CreateView, View
-from .models import Game, Category
+from .models import Game, Category, Participant
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from datetime import timedelta, datetime
 from django.http import JsonResponse
@@ -170,6 +170,15 @@ class DayView(LoginRequiredMixin, TemplateView):
             game = game_form.save(commit=False)
             game.creator = self.request.user
             game.save()
+            # Retrieve the participants from the cleaned data
+            participants = game_form.cleaned_data.get('participants', [])
+
+            # Associate participants with the game
+            for user in participants:
+                Participant.objects.create(user=user, game=game)
+
+            # If using a many-to-many relationship in the form, call save_m2m
+            game_form.save_m2m()  # Save the many-to-many relationships
             return JsonResponse({'success': True, 'message': 'Game added successfully'})
         return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
@@ -177,20 +186,16 @@ class DayView(LoginRequiredMixin, TemplateView):
         court_form = CourtForm(request.POST)
         if court_form.is_valid():
             court_form.save()
-            print("Court added successfully")
             return JsonResponse({'success': True, 'message': 'Court added successfully'})
-        # Correct use of .as_json() on court_form.errors
-        print(court_form.errors)
+
         return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
 
     def handle_category_form(self, request):
         category_form = CategoryForm(request.POST)
         if category_form.is_valid():
             category_form.save()
-            print("Category added successfully")
             return JsonResponse({'success': True, 'message': 'Category added successfully'})
-        # Correct use of .as_json() on category_form.errors
-        print(category_form.errors)
+
         return JsonResponse({'success': False, 'errors': category_form.errors.as_json()}, status=400)
 
 
@@ -198,7 +203,6 @@ class UsersProfile(LoginRequiredMixin, View):
     template_name = 'users_profile.html'
 
     def get(self, request):
-        # Instantiate forms
         profile_form = ProfilePictureUpdateForm()
         password_form = CustomPasswordChangeForm(user=request.user)
 
@@ -210,14 +214,12 @@ class UsersProfile(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
     def save_profile_picture(self, profile_picture):
-        # Define the path where the file will be saved
         file_name = profile_picture.name
         file_path = os.path.join('profile_pictures', file_name)
         full_path = os.path.join(settings.MEDIA_ROOT, file_path)
 
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-        # Save the file to the specified path
         with open(full_path, 'wb+') as destination:
             for chunk in profile_picture.chunks():
                 destination.write(chunk)
@@ -226,12 +228,8 @@ class UsersProfile(LoginRequiredMixin, View):
 
     def post(self, request):
         if 'profile_picture' in request.FILES:
-            # Handling profile picture update
-            print("this is the first if in the loop")
             profile_form = ProfilePictureUpdateForm(request.POST, request.FILES)
             if profile_form.is_valid():
-                # Save the profile picture and update the path in the user profile
-                print("profile form is valid")
                 profile_picture = profile_form.cleaned_data['profile_picture']
                 file_path = self.save_profile_picture(profile_picture)
                 request.user.profile_picture = file_path
@@ -242,16 +240,14 @@ class UsersProfile(LoginRequiredMixin, View):
                 print("Profile form errors:", profile_form.errors)
 
         elif 'old_password' in request.POST:
-            # Handling password change
             password_form = CustomPasswordChangeForm(user=request.user, data=request.POST)
             if password_form.is_valid():
                 user = password_form.save()
-                update_session_auth_hash(request, user)  # Important! Keeps the user logged in
+                update_session_auth_hash(request, user)
                 messages.success(request, 'Your password has been updated.')
             else:
                 messages.error(request, 'Please correct the error below.')
 
-        # Re-render the forms
         profile_form = ProfilePictureUpdateForm()
         password_form = CustomPasswordChangeForm(user=request.user)
 
@@ -260,6 +256,7 @@ class UsersProfile(LoginRequiredMixin, View):
             'password_form': password_form,
         }
         return render(request, self.template_name, context)
+
 
 class WeekView(LoginRequiredMixin, TemplateView):
     template_name = 'week.html'
