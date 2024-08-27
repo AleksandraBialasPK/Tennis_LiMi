@@ -109,8 +109,14 @@ class DayView(LoginRequiredMixin, TemplateView):
             'X-Requested-With', '')
 
     def get_events_and_date_info(self, date):
-        events_query = Game.objects.filter(start_date_and_time__date=date).values(
-            'name', 'category__name', 'category__color', 'start_date_and_time', 'end_date_and_time', 'creator__profile_picture'
+        user = self.request.user
+
+        events_query = Game.objects.filter(
+            start_date_and_time__date=date,
+            participant__user=user
+        ).values(
+            'name', 'category__name', 'category__color', 'start_date_and_time', 'end_date_and_time',
+            'creator__profile_picture'
         )
 
         events = list(events_query)
