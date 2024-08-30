@@ -566,6 +566,16 @@ header > nav {
     z-index: 3;
 }
 
+.edit-button {
+    border: none;
+    background: none;
+}
+
+.delete-button {
+    border: none;
+    background: none;
+}
+
 .side-color {
     width: 44px;
     border-radius: 5px 0 0 5px;

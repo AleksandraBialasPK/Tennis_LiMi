@@ -60,17 +60,20 @@ class GameForm(forms.ModelForm):
         participants = cleaned_data.get('participants')
         end_date_of_recurrence = cleaned_data.get('end_date_of_recurrence')
 
+        if participants is None:
+            participants = []
+
         # 1. Ensure the event ends after it starts
         if start_date_and_time and end_date_and_time:
             if end_date_and_time <= start_date_and_time:
                 raise ValidationError('The event must end after it starts.')
 
         # 2. Limit the number of participants if it's a training session
-        if category and category.name == 'Training' and participants.count() > 5:
+        if category and category.name == 'Training' and len(participants) > 5:
             raise ValidationError('Training can have up to 4 participants plus a trainer.')
 
         # 3. Limit the number of participants for other types of games
-        if category and category.name != 'Training' and participants.count() > 4:
+        if category and category.name != 'Training' and len(participants) > 4:
             raise ValidationError('Other games can have up to 4 participants.')
 
         # 4. Ensure the recurrence can be set up to one year ahead

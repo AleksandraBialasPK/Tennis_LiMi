@@ -4,18 +4,18 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.utils.timezone import now
 from Tennis_training_system import settings
+from . import forms
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
-from django.contrib.auth.views import LoginView, LogoutView
-from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.views import LogoutView
+from django.shortcuts import get_object_or_404
 from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
-from django.views.generic import FormView, ListView, TemplateView, CreateView, View
+from django.views.generic import FormView, TemplateView, View
 from .models import Game, Category, Participant
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import timedelta, datetime
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 import logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,19 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     def get(self, request, *args, **kwargs):
         if self.is_ajax(request):
+            if 'fetch_game_details' in request.GET and 'game_id' in request.GET:
+                game_id = request.GET.get('game_id')
+                game = get_object_or_404(Game, game_id=game_id)
+                game_data = {
+                    'name': game.name,
+                    'start_date_and_time': game.start_date_and_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'end_date_and_time': game.end_date_and_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'category': game.category.category_id,
+                    'court': game.court.court_id,
+                    'participants': list(game.participant_set.values_list('user__email', 'user__username')),
+                }
+                return JsonResponse(game_data)
+
             date_str = request.GET.get('date')
             date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else now().date()
             events, date_info = self.get_events_and_date_info(date)
@@ -115,7 +128,13 @@ class DayView(LoginRequiredMixin, TemplateView):
             start_date_and_time__date=date,
             participant__user=user
         ).values(
-            'name', 'category__name', 'category__color', 'start_date_and_time', 'end_date_and_time',
+            'game_id',
+            'name',
+            'category__name',
+            'category__color',
+            'start_date_and_time',
+            'end_date_and_time',
+            'creator',
             'creator__profile_picture'
         )
 
@@ -138,6 +157,8 @@ class DayView(LoginRequiredMixin, TemplateView):
             else:
                 event['profile_picture_url'] = settings.STATIC_URL + 'images/Ola.png'
 
+            event['is_creator'] = (event['creator'] == self.request.user.user_id)
+
         date_info = {
             'current_date': date.strftime('%d %B %Y'),
             'prev_date': (date - timedelta(days=1)).strftime('%Y-%m-%d'),
@@ -152,13 +173,19 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         if self.is_ajax(request):
-            if 'submit_game' in request.POST:
+            if 'update_game' in request.POST and request.POST.get('game_id'):
+                return self.handle_game_update(request)
+
+            elif 'submit_game' in request.POST:
                 return self.handle_game_form(request)
 
-            if 'submit_court' in request.POST:
+            elif 'delete_game' in request.POST:
+                return self.handle_game_delete(request)
+
+            elif 'submit_court' in request.POST:
                 return self.handle_court_form(request)
 
-            if 'submit_category' in request.POST:
+            elif 'submit_category' in request.POST:
                 return self.handle_category_form(request)
 
         return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -171,6 +198,7 @@ class DayView(LoginRequiredMixin, TemplateView):
             game.save()
 
             participants = game_form.cleaned_data.get('participants', [])
+            print("Validated participants:", participants)
 
             for user in participants:
                 Participant.objects.create(user=user, game=game)
@@ -216,6 +244,56 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
+    def handle_game_update(self, request):
+        print("Handling game update...")
+        game_id = request.POST.get('game_id')
+
+        if not game_id:
+            print("No game ID provided in the request.")
+            return JsonResponse({'success': False, 'message': 'Game ID is required.'}, status=400)
+
+        try:
+            game = get_object_or_404(Game, game_id=game_id, creator=request.user)
+        except Http404:
+            print(f"Game with ID {game_id} not found or user is not the creator.")
+            return JsonResponse({'success': False, 'message': 'Game not found or permission denied.'}, status=404)
+
+        form = GameForm(request.POST, instance=game)
+
+        if form.is_valid():
+            print(f"Form is valid. Saving game...{game_id}")
+            updated_game = form.save(commit=False)  # Save the form to get the updated game instance
+            updated_game.game_id = game_id
+            game.save()
+            # Handle participants only after form is valid
+            participants = form.cleaned_data.get('participants', [])
+            print("Validated participants:", participants)
+
+            # Clear existing participants and add the updated ones
+            updated_game.participant_set.all().delete()  # Remove current participants
+
+            for user in participants:
+                Participant.objects.create(user=user, game=updated_game)
+
+            # Save many-to-many relationships, if any
+            form.save_m2m()
+
+            return JsonResponse({'success': True, 'message': 'Game updated successfully'})
+        else:
+            print("Form is invalid. Errors:", form.errors)
+            return JsonResponse({'success': False, 'errors': form.errors.as_json()}, status=400)
+
+    def handle_game_delete(self, request):
+        game_id = request.POST.get('game_id')
+        game = get_object_or_404(Game, game_id=game_id, creator=request.user)
+
+        if game.creator == request.user:
+            game.delete()
+            return JsonResponse({'success': True, 'message': 'Game deleted successfully'})
+        else:
+            return JsonResponse({'success': False, 'message': 'You do not have permission to delete this game'},
+                                status=403)
+
     def handle_court_form(self, request):
         court_form = CourtForm(request.POST)
         if court_form.is_valid():
@@ -231,7 +309,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             return JsonResponse({'success': True, 'message': 'Category added successfully'})
 
         return JsonResponse({'success': False, 'errors': category_form.errors.as_json()}, status=400)
-
 
 class UsersProfile(LoginRequiredMixin, View):
     template_name = 'users_profile.html'
@@ -271,7 +348,6 @@ class UsersProfile(LoginRequiredMixin, View):
                 messages.success(request, 'Your profile picture has been updated.')
             else:
                 messages.error(request, 'There has been an error while updating the profile picture.')
-                print("Profile form errors:", profile_form.errors)
 
         elif 'old_password' in request.POST:
             password_form = CustomPasswordChangeForm(user=request.user, data=request.POST)
