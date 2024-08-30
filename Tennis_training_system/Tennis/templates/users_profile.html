@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pl">
 {% load static %}
+{% load widget_tweaks %}
 
 <head>
     <meta charset="UTF-8">
@@ -41,20 +42,23 @@
 
             <form class="profile-form" id="password_form" method="POST">
                 {% csrf_token %}
-                <div class="form-group">
-                    {{ password_form.old_password.label_tag }} {{ password_form.old_password }}
+                <div class="form-group input-container">
+                    {{ password_form.old_password.label_tag }}
+                    {{ password_form.old_password|add_class:"input-field"  }}
                     {% for error in password_form.old_password.errors %}
                         <div class="error">{{ error }}</div>
                     {% endfor %}
                 </div>
-                <div class="form-group">
-                    {{ password_form.new_password1.label_tag }} {{ password_form.new_password1 }}
+                <div class="form-group input-container">
+                    {{ password_form.new_password1.label_tag }}
+                    {{ password_form.new_password1|add_class:"login-input" }}
                     {% for error in password_form.new_password1.errors %}
                         <div class="error">{{ error }}</div>
                     {% endfor %}
                 </div>
-                <div class="form-group">
-                    {{ password_form.new_password2.label_tag }} {{ password_form.new_password2 }}
+                <div class="form-group input-container">
+                    {{ password_form.new_password2.label_tag }}
+                    {{ password_form.new_password2|add_class:"login-input" }}
                     {% for error in password_form.new_password2.errors %}
                         <div class="error">{{ error }}</div>
                     {% endfor %}

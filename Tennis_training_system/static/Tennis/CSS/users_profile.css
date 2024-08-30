@@ -82,6 +82,7 @@ main {
     appearance: none;
     -webkit-appearance: none;
     outline: none;
+    padding-top: 25px;
 }
 
 .avatar>img {
@@ -90,10 +91,15 @@ main {
     background-size: cover;
     background-position: top center;
     border-radius: 50%;
+    cursor: pointer;
+}
+
+.avatar>img:hover {
+    transform: scale(1.05);
 }
 
 .nickname {
-    margin-bottom: 50px;
+    margin-bottom: 25px;
 }
 
 #profile_form {
@@ -106,6 +112,7 @@ main {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 20px 50px;
 }
 
 .users-profile-button {
@@ -125,13 +132,43 @@ main {
     align-items: center;
 }
 
-.users-profile-button,
-.users-profile-button,
-.users-profile-button {
+.users-profile-button:hover,
+.users-profile-button:active,
+.users-profile-button:focus {
     transform: scale(1.1);
     outline: none;
 }
 
 .form-group {
-    margin: 5px;
+    border: none;
+    background: none;
+    margin-left: 1em;
+    font-weight: 700;
+    width: 100%;
+    transition: .2s;
+    color: #303030;
+}
+
+.input-container {
+    display: flex;
+    width: 100%;
+    border-bottom: 2px solid #c3d8d4;
+    margin-bottom: 10px;
+    padding: 10px;
+    color: #046380;
+}
+
+.input-container:active,
+.input-container:focus,
+.input-container:hover {
+    border-bottom-color: #95bab3;
+}
+
+input.form-group:focus {
+    outline: none;
+}
+
+.input-field {
+    outline: none;
+    border: none;
 }

@@ -70,9 +70,9 @@ body {
     margin: 10px 10px;
 }
 
-.create-new-event-button,
-.create-new-event-button,
-.create-new-event-button {
+.create-new-event-button:hover,
+.create-new-event-button:active,
+.create-new-event-button:focus {
     transform: scale(1.1);
     outline: none;
 }
