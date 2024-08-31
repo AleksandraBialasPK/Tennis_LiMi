@@ -135,7 +135,7 @@ main {
 .users-profile-button:hover,
 .users-profile-button:active,
 .users-profile-button:focus {
-    transform: scale(1.1);
+    transform: scale(1.05);
     outline: none;
 }
 
