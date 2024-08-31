@@ -1,13 +1,10 @@
 let selectedDate;
 
 document.addEventListener("DOMContentLoaded", function() {
-    // Declare the selectedDate variable to store the current date being viewed
     let selectedDate = new Date().toISOString().split('T')[0];
 
-    // Initial load for today's events using AJAX
     loadEvents(selectedDate);
 
-    // Handle date navigation buttons
     document.querySelector('.prev-day-btn').addEventListener('click', function() {
         const date = this.getAttribute('data-date');
         selectedDate = date; // Update the selected date
@@ -20,7 +17,6 @@ document.addEventListener("DOMContentLoaded", function() {
         loadEvents(date);
     });
 
-    // Handle "Back to Today" button
     document.getElementById('back-to-today').addEventListener('click', function() {
         selectedDate = new Date().toISOString().split('T')[0]; // Reset to today's date
         loadEvents(selectedDate);
@@ -32,26 +28,25 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    const intervalTime = 10000; // 10 seconds
+    const intervalTime = 10000;
     setInterval(function() {
-        loadEvents(selectedDate); // Use the selected date
+        loadEvents(selectedDate);
     }, intervalTime);
 });
 
-// Function to load events based on the given date
 function loadEvents(date) {
     $.ajax({
-        url: "/day/", // Ensure this URL matches your view handling the request
+        url: "/day/",
         data: { date: date },
         headers: {
-            'x-requested-with': 'XMLHttpRequest' // This header is used to differentiate AJAX calls
+            'x-requested-with': 'XMLHttpRequest'
         },
         success: function(data) {
             updateEvents(data);
         },
         error: function(jqXHR, textStatus, errorThrown) {
                     console.error('Failed to fetch events', textStatus, errorThrown);
-                    console.error('Response Text:', jqXHR.responseText);  // Print out the response text for debugging
+                    console.error('Response Text:', jqXHR.responseText);
         }
     });
 }
@@ -136,7 +131,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const color = this.getAttribute('data-color'); // Get the color from the data attribute
+            const color = this.getAttribute('data-color');
             if (this.checked) {
                 this.style.backgroundColor = color;
                 this.style.borderColor = color;
@@ -172,30 +167,26 @@ function filterEvents() {
     });
 }
 
-// Function to open the form pre-filled for editing an event
 function openEditForm(gameId) {
     const form = document.getElementById('game_form');
     form.setAttribute('data-game-id', gameId);
     form.style.display = 'block';
     console.log("Opening edit form for game ID:", gameId);
 
-    // Set the game_id hidden field
     const gameIdField = form.querySelector('input[name="game_id"]');
     gameIdField.value = gameId;
 
     console.log("Setting hidden game_id field value:", gameIdField.value);
 
-     // Show the update button, hide the add button
     document.getElementById('update-game-button').style.display = 'inline';
     document.getElementById('add-game-button').style.display = 'none';
 
-    // Fetch current game details and populate the form
     $.ajax({
         url: `/day/`,
         method: 'GET',
         data: {
-            'game_id': gameId, // Pass the game_id as a parameter to fetch details
-            'fetch_game_details': 'true' // A flag to indicate this is a detail fetch request
+            'game_id': gameId,
+            'fetch_game_details': 'true'
         },
         success: function(data) {
             console.log("Game details loaded for editing:", data);
@@ -208,33 +199,28 @@ function openEditForm(gameId) {
             const participantSelect = form.querySelector('[name="participants"]');
             if (participantSelect) {
                 console.log("Setting participants:", data.participants);
-                // Clear current selection
                 $(participantSelect).val(null).trigger('change');
 
-                // Loop through participants (email, username) tuples
                 data.participants.forEach(participant => {
                     const email = participant[0];
                     const username = participant[1];
                     const displayText = `${username} (${email})`;
 
-                    // Check if the option already exists
                     let option = $(participantSelect).find(`option[value="${email}"]`);
                     if (option.length) {
                         option.prop('selected', true);
                     } else {
-                        // If the option is not found, add it as a new option
                         let newOption = new Option(displayText, email, true, true);
                         $(participantSelect).append(newOption).trigger('change');
                     }
                 });
 
-                // Trigger change event to update the Select2 component
                 $(participantSelect).trigger('change');
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.error('Failed to load game details:', textStatus, errorThrown);
-            console.error('Response Text:', jqXHR.responseText);  // Print out the response text for debugging
+            console.error('Response Text:', jqXHR.responseText);
             alert('Failed to load game details.');
         }
     });
@@ -327,26 +313,27 @@ function handleFormSubmission(form, successMessage, buttonName) {
 
         formData.append(buttonName, 'true');
 
-        const gameId = form.querySelector('[name="game_id"]').value;
-        console.log("Form submission triggered. Game ID:", gameId);
+        const isGameForm = (buttonName === 'submit_game' || buttonName === 'update_game');
 
-        // Remove both flags first to avoid conflict
-        formData.delete('submit_game');
-        formData.delete('update_game');
+        if(isGameForm) {
+            const gameId = form.querySelector('[name="game_id"]').value;
+            console.log("Form submission triggered. Game ID:", gameId);
 
-        if (gameId) {
-            console.log("Updating existing game with ID:", gameId);
-            formData.append('update_game', 'true'); // Indicate update action
-            formData.append('game_id', gameId); // Pass game_id for update
+            formData.delete('submit_game');
+            formData.delete('update_game');
+
+            if (gameId) {
+                console.log("Updating existing game with ID:", gameId);
+                formData.append('update_game', 'true');
+                formData.append('game_id', gameId);
+            } else {
+                console.log("Creating a new game.");
+                formData.append(buttonName, 'true');
+            }
         } else {
-            console.log("Creating a new game.");
-            formData.append(buttonName, 'true'); // Normal submission for creating
+            console.log(`Handling submission for ${buttonName}`);
+            formData.append(buttonName, 'true');
         }
-
-        // Print out all the form data for debugging
-        formData.forEach((value, key) => {
-            console.log(key, value);
-        });
 
         fetch(window.location.href, {
             method: 'POST',
