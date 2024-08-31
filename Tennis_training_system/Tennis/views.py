@@ -106,6 +106,7 @@ class DayView(LoginRequiredMixin, TemplateView):
                     'court': game.court.court_id,
                     'court_name': game.court.name,
                     'participants': list(game.participant_set.values_list('user__email', 'user__username')),
+                    'is_creator': (game.creator == request.user),
                 }
                 return JsonResponse(game_data)
 

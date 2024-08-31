@@ -89,19 +89,6 @@ function appendEvent(event) {
 
     eventDiv.style.backgroundColor = backgroundColorHEX;
 
-    let editDeleteButtons = '';
-        if (event.is_creator) {
-            editDeleteButtons = `
-                <button onclick="openEditForm(${event.game_id})" class="edit-button">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                
-                <button onclick="deleteGame(${event.game_id})" class="delete-button">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            `;
-        }
-
     eventDiv.innerHTML = `
         <div class="side-color" style="background-color: ${categoryColor};">
             <div class="picture-for-event">
@@ -112,7 +99,6 @@ function appendEvent(event) {
             <div class="event-name">${event.name}</div>
             <div class="event-time">${new Date(event.start_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - ${new Date(event.end_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
         </div>
-        ${editDeleteButtons}
     `;
         
     eventDiv.addEventListener('click', function() {
@@ -156,9 +142,6 @@ function showEventDetails(gameId) {
             modal.querySelector('.modal-category').textContent = `Category: ${data.category_name}`;
             modal.querySelector('.modal-court').textContent = `Court: ${data.court_name}`;
 
-            // const participants = data.participants.map(participant => `${participant[1]} (${participant[0]})`).join(', ');
-            // modal.querySelector('.modal-participants').textContent = `Participants: ${participants}`;
-                        // Get the participants list element and clear it
             const participantsList = modal.querySelector('.modal-participants-list');
             participantsList.innerHTML = ''; // Clear existing list items
 
@@ -170,6 +153,28 @@ function showEventDetails(gameId) {
                 listItem.textContent = `${username} (${email})`;
                 participantsList.appendChild(listItem);
             });
+
+            const editButton = modal.querySelector('.edit-button');
+            const deleteButton = modal.querySelector('.delete-button');
+
+            if (data.is_creator) {
+                // Show edit and delete buttons if the user is the creator
+                editButton.style.display = 'inline-block';
+                deleteButton.style.display = 'inline-block';
+
+                // Set up click handlers
+                editButton.addEventListener('click', function() {
+                    openEditForm(gameIdData);
+                });
+
+                deleteButton.addEventListener('click', function() {
+                    deleteGame(gameIdData);
+                });
+            } else {
+                // Hide buttons if the user is not the creator
+                editButton.style.display = 'none';
+                deleteButton.style.display = 'none';
+            }
 
             modal.style.display = 'block';
 
