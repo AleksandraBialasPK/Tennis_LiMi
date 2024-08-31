@@ -102,7 +102,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                     'start_date_and_time': game.start_date_and_time.strftime('%Y-%m-%d %H:%M:%S'),
                     'end_date_and_time': game.end_date_and_time.strftime('%Y-%m-%d %H:%M:%S'),
                     'category': game.category.category_id,
+                    'category_name': game.category.name,
                     'court': game.court.court_id,
+                    'court_name': game.court.name,
                     'participants': list(game.participant_set.values_list('user__email', 'user__username')),
                 }
                 return JsonResponse(game_data)

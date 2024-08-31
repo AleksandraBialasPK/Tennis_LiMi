@@ -114,9 +114,84 @@ function appendEvent(event) {
         </div>
         ${editDeleteButtons}
     `;
+        
+    eventDiv.addEventListener('click', function() {
+        showEventDetails(event);
+    });
 
     eventsDiv.appendChild(eventDiv);
 }
+
+function formatDateTime(dateTimeString) {
+    const date = new Date(dateTimeString);
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${day}.${month}.${year}, ${hours}:${minutes}`;
+}
+
+function showEventDetails(gameId) {
+    console.log("Fetching details for game:", gameId);
+    const gameIdData = gameId.game_id;
+
+    $.ajax({
+        url: `/day/`,
+        method: 'GET',
+        data: {
+            'game_id': gameIdData,
+            'fetch_game_details': 'true'
+        },
+        success: function(data) {
+            console.log("Game details loaded for presenting:", data);
+
+            const modal = document.getElementById('eventDetailsModal');
+
+            modal.querySelector('.modal-title').textContent = data.name;
+            modal.querySelector('.modal-start-time').textContent = `Start: ${formatDateTime(data.start_date_and_time)}`;
+            modal.querySelector('.modal-end-time').textContent = `End: ${formatDateTime(data.end_date_and_time)}`;
+            modal.querySelector('.modal-category').textContent = `Category: ${data.category_name}`;
+            modal.querySelector('.modal-court').textContent = `Court: ${data.court_name}`;
+
+            // const participants = data.participants.map(participant => `${participant[1]} (${participant[0]})`).join(', ');
+            // modal.querySelector('.modal-participants').textContent = `Participants: ${participants}`;
+                        // Get the participants list element and clear it
+            const participantsList = modal.querySelector('.modal-participants-list');
+            participantsList.innerHTML = ''; // Clear existing list items
+
+            // Add each participant to the list
+            data.participants.forEach(participant => {
+                const email = participant[0];
+                const username = participant[1];
+                const listItem = document.createElement('li');
+                listItem.textContent = `${username} (${email})`;
+                participantsList.appendChild(listItem);
+            });
+
+            modal.style.display = 'block';
+
+            const closeModalButton = document.getElementById('closeModalButton');
+            closeModalButton.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error('Failed to load game details:', textStatus, errorThrown);
+            console.error('Response Text:', jqXHR.responseText);
+            alert('Failed to load game details.');
+        }
+    });
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('eventDetailsModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+};
 
 function hexToRGBA(hex, alpha) {
     const r = parseInt(hex.slice(1, 3), 16);
