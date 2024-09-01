@@ -239,8 +239,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             new_game_end = game_form.cleaned_data['end_date_and_time']
             new_game_court = game_form.cleaned_data['court']
 
-            print(f"New game start: {new_game_start}")
-            print(f"New game end: {new_game_end}")
             print(f"New game court: {new_game_court.name}")
 
             # Get user's events for the day, sorted by start time
@@ -260,31 +258,29 @@ class DayView(LoginRequiredMixin, TemplateView):
                     break
 
             if preceding_event:
-                travel_time = self.calculate_travel_time_mapbox(
-                    preceding_event.court.latitude, preceding_event.court.longitude,
-                    new_game_court.latitude, new_game_court.longitude,
-                    MAPBOX_API_KEY
-                )
-                print(f"Calculated travel time: {travel_time} minutes")
+                if preceding_event.court != new_game_court:
+                    travel_time = self.calculate_travel_time_mapbox(
+                        preceding_event.court.latitude, preceding_event.court.longitude,
+                        new_game_court.latitude, new_game_court.longitude,
+                        MAPBOX_API_KEY
+                    )
 
-                if travel_time is not None:
-                    time_available = (new_game_start - preceding_event.end_date_and_time).total_seconds() / 60
-                    print(f"Time available between events: {time_available} minutes")
+                    if travel_time is not None:
+                        time_available = (new_game_start - preceding_event.end_date_and_time).total_seconds() / 60
 
-                    if request.POST.get('confirm') == 'true':
-                        print('User confirmed to add event despite insufficient travel time.')
-                    else:
-                        # Not enough time to travel, prompt user for confirmation
-                        print('not enough time available')
-                        return JsonResponse({
-                            'success': False,
-                            'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                       f"The time gap between games is {math.ceil(time_available)} minutes.\n"
-                                       f"Would you like to create the event anyway?",
-                            'confirm_needed': True
-                        })
+                        if request.POST.get('confirm') == 'true':
+                            print('User confirmed to add event despite insufficient travel time.')#TODO change this
+                        else:
+                            return JsonResponse({
+                                'success': False,
+                                'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                           f"The time gap between games is {math.ceil(time_available)} minutes.\n"
+                                           f"Would you like to create the event anyway?",
+                                'confirm_needed': True
+                            })
+                else:
+                    print("No need to check the commute time, same court.")
 
-            # If no preceding event or travel time is acceptable, save the game
             game = game_form.save(commit=False)
             game.creator = self.request.user
             game.save()
@@ -353,13 +349,10 @@ class DayView(LoginRequiredMixin, TemplateView):
         form = GameForm(request.POST, instance=game)
 
         if form.is_valid():
-            print(f"Form is valid. Saving game...{game_id}")
-            updated_game = form.save(commit=False)  # Save the form to get the updated game instance
+            updated_game = form.save(commit=False)
             updated_game.game_id = game_id
             game.save()
-            # Handle participants only after form is valid
             participants = form.cleaned_data.get('participants', [])
-            print("Validated participants:", participants)
 
             # Clear existing participants and add the updated ones
             updated_game.participant_set.all().delete()  # Remove current participants
@@ -367,7 +360,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             for user in participants:
                 Participant.objects.create(user=user, game=updated_game)
 
-            # Save many-to-many relationships, if any
             form.save_m2m()
 
             return JsonResponse({'success': True, 'message': 'Game updated successfully'})
