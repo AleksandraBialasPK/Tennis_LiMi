@@ -4,7 +4,11 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.utils.timezone import now
 from Tennis_training_system import settings
-from . import forms
+from django.conf import settings
+from django.views.decorators.cache import cache_control
+from django.utils.decorators import method_decorator
+from Tennis_training_system.settings import MAPBOX_API_KEY
+import math
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LogoutView
@@ -16,6 +20,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import timedelta, datetime
 from django.http import JsonResponse, Http404
 import logging
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +97,7 @@ class DayView(LoginRequiredMixin, TemplateView):
             'category_form': CategoryForm(),
         }
 
+    @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def get(self, request, *args, **kwargs):
         if self.is_ajax(request):
             if 'fetch_game_details' in request.GET and 'game_id' in request.GET:
@@ -193,9 +199,92 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
+    def calculate_travel_time_mapbox(self, origin_lat, origin_lon, dest_lat, dest_lon, api_key):
+        """
+        Calculate travel time between two locations using Mapbox Directions API.
+
+        :param origin_lat: Latitude of the origin.
+        :param origin_lon: Longitude of the origin.
+        :param dest_lat: Latitude of the destination.
+        :param dest_lon: Longitude of the destination.
+        :param api_key: Mapbox API key.
+        :return: Travel time in minutes considering traffic.
+        """
+        print(f"Origin: {origin_lat}, {origin_lon}")
+        print(f"Destination: {dest_lat}, {dest_lon}")
+
+        url = f"https://api.mapbox.com/directions/v5/mapbox/driving-traffic/{origin_lon},{origin_lat};{dest_lon},{dest_lat}"
+        params = {
+            'access_token': api_key,
+            'geometries': 'geojson',
+            'overview': 'full',
+            'steps': 'true',
+        }
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        if response.status_code == 200 and data['routes']:
+            travel_time_seconds = data['routes'][0]['duration']
+            travel_time_minutes = travel_time_seconds / 60
+            return travel_time_minutes
+        else:
+            print("Error:", data.get('message', 'Unknown error'))
+            return None
+
+    @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def handle_game_form(self, request):
         game_form = GameForm(request.POST)
         if game_form.is_valid():
+            new_game_start = game_form.cleaned_data['start_date_and_time']
+            new_game_end = game_form.cleaned_data['end_date_and_time']
+            new_game_court = game_form.cleaned_data['court']
+
+            print(f"New game start: {new_game_start}")
+            print(f"New game end: {new_game_end}")
+            print(f"New game court: {new_game_court.name}")
+
+            # Get user's events for the day, sorted by start time
+            user_games = Game.objects.filter(
+                creator=request.user,
+                start_date_and_time__date=new_game_start.date()
+            ).order_by('start_date_and_time')
+
+            print(f"User games found: {user_games.count()}")
+
+            preceding_event = None
+            for game in user_games:
+                if game.end_date_and_time <= new_game_start:
+                    preceding_event = game
+                    print(f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
+                else:
+                    break
+
+            if preceding_event:
+                travel_time = self.calculate_travel_time_mapbox(
+                    preceding_event.court.latitude, preceding_event.court.longitude,
+                    new_game_court.latitude, new_game_court.longitude,
+                    MAPBOX_API_KEY
+                )
+                print(f"Calculated travel time: {travel_time} minutes")
+
+                if travel_time is not None:
+                    time_available = (new_game_start - preceding_event.end_date_and_time).total_seconds() / 60
+                    print(f"Time available between events: {time_available} minutes")
+
+                    if request.POST.get('confirm') == 'true':
+                        print('User confirmed to add event despite insufficient travel time.')
+                    else:
+                        # Not enough time to travel, prompt user for confirmation
+                        print('not enough time available')
+                        return JsonResponse({
+                            'success': False,
+                            'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                       f"The time gap between games is {math.ceil(time_available)} minutes.\n"
+                                       f"Would you like to create the event anyway?",
+                            'confirm_needed': True
+                        })
+
+            # If no preceding event or travel time is acceptable, save the game
             game = game_form.save(commit=False)
             game.creator = self.request.user
             game.save()

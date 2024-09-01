@@ -25,6 +25,13 @@ class ParticipantsWidget(ModelSelect2MultipleWidget):
         'email__icontains',
     ]
 
+    def build_attrs(self, *args, **kwargs):
+        attrs = super().build_attrs(*args, **kwargs)
+        attrs['data-minimum-input-length'] = 1  # Adjust the minimum input length for search
+        attrs['data-ajax--cache'] = 'false'  # Disable caching for AJAX requests
+        attrs['data-ajax--delay'] = 250  # Set delay for AJAX requests
+        return attrs
+
 
 class GameForm(forms.ModelForm):
     recurrence_type = forms.ChoiceField(

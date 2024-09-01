@@ -356,12 +356,20 @@ function toggleForm(form, button, isEdit = false) {
                     if (!form.contains(event.target) && event.target !== button) {
                         form.style.display = 'none';
                         form.reset();
+                        const select2Fields = gameForm.querySelectorAll('.django-select2');
+                        select2Fields.forEach(field => {
+                        $(field).val(null).trigger('change'); // Reset the select2 field
+                        });
                         outsideOfForm.removeEventListener('click', hideForm);
                     }
                 });
             } else {
                 form.style.display = 'none';
                 form.reset();
+                const select2Fields = gameForm.querySelectorAll('.django-select2');
+                select2Fields.forEach(field => {
+                    $(field).val(null).trigger('change'); // Reset the select2 field
+                });
             }
         });
     } else {
@@ -379,6 +387,10 @@ if (cancelEditButton) {
     cancelEditButton.addEventListener('click', function () {
         if (confirm("Are you sure you want to cancel editing and discard changes?")) {
             game_form.reset();
+            const select2Fields = gameForm.querySelectorAll('.django-select2');
+            select2Fields.forEach(field => {
+                $(field).val(null).trigger('change'); // Reset the select2 field
+            });
             game_form.style.display = 'none';
         }
     });
@@ -387,6 +399,11 @@ if (cancelEditButton) {
 }
 
 function handleFormSubmission(form, successMessage, buttonName) {
+    const modal = document.getElementById('confirmationModal');
+    const modalMessage = document.getElementById('modalMessage');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
+
     form.addEventListener('submit', function(event) {
         event.preventDefault();
         let formData = new FormData(this);
@@ -397,21 +414,17 @@ function handleFormSubmission(form, successMessage, buttonName) {
 
         if(isGameForm) {
             const gameId = form.querySelector('[name="game_id"]').value;
-            console.log("Form submission triggered. Game ID:", gameId);
 
             formData.delete('submit_game');
             formData.delete('update_game');
 
             if (gameId) {
-                console.log("Updating existing game with ID:", gameId);
                 formData.append('update_game', 'true');
                 formData.append('game_id', gameId);
             } else {
-                console.log("Creating a new game.");
                 formData.append(buttonName, 'true');
             }
         } else {
-            console.log(`Handling submission for ${buttonName}`);
             formData.append(buttonName, 'true');
         }
 
@@ -433,8 +446,61 @@ function handleFormSubmission(form, successMessage, buttonName) {
             if (data.success) {
                 alert(successMessage);
                 form.reset();
+                const select2Fields = form.querySelectorAll('.django-select2');
+                select2Fields.forEach(field => {
+                    $(field).val(null).trigger('change'); // Reset the select2 field
+                });
                 form.style.display = 'none';
                 loadEvents(selectedDate);
+            } else if (data.confirm_needed) {
+                // Show custom modal with the warning message
+                modalMessage.textContent = data.message;
+                modal.style.display = 'block';
+
+                // Yes button: User wants to add the game anyway
+                confirmYes.onclick = function() {
+                    modal.style.display = 'none';
+                    formData.append('confirm', 'true');
+
+                    // Re-send the form with the confirmation flag
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData,
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(successMessage);
+                            form.reset();
+                            const select2Fields = form.querySelectorAll('.django-select2');
+                            select2Fields.forEach(field => {
+                                $(field).val(null).trigger('change'); // Reset the select2 field
+                            });
+                            form.style.display = 'none';
+                            loadEvents(selectedDate);
+                        } else {
+                            alert('Failed to add game: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed: An unexpected error occurred.');
+                    });
+                };
+
+                // No button: User cancels the action
+                confirmNo.onclick = function() {
+                    modal.style.display = 'none';
+                };
             } else {
                 if (data.errors) {
                     let errorMessages = '';

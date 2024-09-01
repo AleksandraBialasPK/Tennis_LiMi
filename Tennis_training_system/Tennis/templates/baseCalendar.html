@@ -113,6 +113,14 @@
             </form>
         </div>
     </section>
+    <div id="confirmationModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-button" id="closeModalButton">&times;</span>
+            <p id="modalMessage">Are you sure you want to add the event?</p>
+            <button id="confirmYes" class="modal-button">Yes</button>
+            <button id="confirmNo" class="modal-button">No</button>
+        </div>
+    </div>
     {% block day %}
     {% endblock %}
     <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
