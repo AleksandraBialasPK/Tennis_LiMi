@@ -245,8 +245,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param api_key: Mapbox API key.
         :return: Travel time in minutes considering traffic.
         """
-        print(f"Origin: {origin_lat}, {origin_lon}")
-        print(f"Destination: {dest_lat}, {dest_lon}")
 
         url = f"https://api.mapbox.com/directions/v5/mapbox/driving-traffic/{origin_lon},{origin_lat};{dest_lon},{dest_lat}"
         params = {
@@ -274,15 +272,12 @@ class DayView(LoginRequiredMixin, TemplateView):
             new_game_end = game_form.cleaned_data['end_date_and_time']
             new_game_court = game_form.cleaned_data['court']
 
-            print(f"New game court: {new_game_court.name}")
 
             # Get user's events for the day, sorted by start time
             user_games = Game.objects.filter(
                 creator=request.user,
                 start_date_and_time__date=new_game_start.date()
             ).order_by('start_date_and_time')
-
-            print(f"User games found: {user_games.count()}")
 
             preceding_event = None
             following_event = None
@@ -335,15 +330,11 @@ class DayView(LoginRequiredMixin, TemplateView):
                     following_event.court.latitude, following_event.court.longitude,
                     MAPBOX_API_KEY
                 )
-                print(f"Calculated travel time to following event: {travel_time} minutes")
 
                 if travel_time is not None:
                     time_available = (following_event.start_date_and_time - new_game_end).total_seconds() / 60
-                    print(f"Time available after new event: {time_available} minutes")
 
                     if travel_time > time_available:
-                        # Not enough time to travel
-                        print('Not enough time available to following event')
                         return JsonResponse({
                             'success': False,
                             'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes. "
@@ -359,7 +350,6 @@ class DayView(LoginRequiredMixin, TemplateView):
 
             # If no preceding or following event conflict, save the game
             if not request.POST.get('confirm') == 'true' and (travel_time and travel_time > time_available):
-                print('User did not confirm to add event with insufficient travel time.')
                 return JsonResponse({'success': False, 'message': 'Event not added due to insufficient travel time.'})
 
             game = game_form.save(commit=False)
@@ -414,22 +404,86 @@ class DayView(LoginRequiredMixin, TemplateView):
         return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
     def handle_game_update(self, request):
-        print("Handling game update...")
         game_id = request.POST.get('game_id')
 
         if not game_id:
-            print("No game ID provided in the request.")
             return JsonResponse({'success': False, 'message': 'Game ID is required.'}, status=400)
 
         try:
             game = get_object_or_404(Game, game_id=game_id, creator=request.user)
         except Http404:
-            print(f"Game with ID {game_id} not found or user is not the creator.")
             return JsonResponse({'success': False, 'message': 'Game not found or permission denied.'}, status=404)
 
         form = GameForm(request.POST, instance=game)
 
         if form.is_valid():
+            updated_game_start = form.cleaned_data['start_date_and_time']
+            updated_game_end = form.cleaned_data['end_date_and_time']
+            updated_game_court = form.cleaned_data['court']
+
+            user_games = Game.objects.filter(
+                creator=request.user,
+                start_date_and_time__date=updated_game_start.date()
+            ).order_by('start_date_and_time')
+
+            preceding_event = None
+            following_event = None
+
+            for game in user_games:
+                if game.end_date_and_time <= updated_game_start and game.game_id != game_id:
+                    preceding_event = game
+                    print(
+                        f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
+                elif game.start_date_and_time >= updated_game_end and game.game_id != game_id and not following_event:
+                    following_event = game
+                    print(
+                        f"Found following event: {following_event.name} starting at {following_event.start_date_and_time}")
+                    break
+
+            if preceding_event and preceding_event.court != updated_game_court:
+                travel_time = self.calculate_travel_time_mapbox(
+                    preceding_event.court.latitude, preceding_event.court.longitude,
+                    updated_game_court.latitude, updated_game_court.longitude,
+                    MAPBOX_API_KEY
+                )
+
+                if travel_time is not None:
+                    time_available = (updated_game_start - preceding_event.end_date_and_time).total_seconds() / 60
+                    if travel_time > time_available:
+                        if request.POST.get('confirm') == 'true':
+                            print('User confirmed to update event despite insufficient travel time.')
+                        else:
+                            return JsonResponse({
+                                'success': False,
+                                'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                           f"The time gap between the previous game and this one would be {math.ceil(time_available)} minutes.\n"
+                                           f"Would you like to update the event anyway?",
+                                'confirm_needed': True
+                            })
+
+                # Check travel time for following event
+            if following_event and following_event.court != updated_game_court:
+                travel_time = self.calculate_travel_time_mapbox(
+                    updated_game_court.latitude, updated_game_court.longitude,
+                    following_event.court.latitude, following_event.court.longitude,
+                    MAPBOX_API_KEY
+                )
+
+                if travel_time is not None:
+                    time_available = (following_event.start_date_and_time - updated_game_end).total_seconds() / 60
+                    if travel_time > time_available:
+                        if request.POST.get('confirm') == 'true':
+                            print(
+                                'User confirmed to update event despite insufficient travel time to the following event.')
+                        else:
+                            return JsonResponse({
+                                'success': False,
+                                'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                           f"The time gap after the updated game and the following one is {math.ceil(time_available)} minutes.\n"
+                                           f"Would you like to update the event anyway?",
+                                'confirm_needed': True
+                            })
+
             updated_game = form.save(commit=False)
             updated_game.game_id = game_id
             game.save()
