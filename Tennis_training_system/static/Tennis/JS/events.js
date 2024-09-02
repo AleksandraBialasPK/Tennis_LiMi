@@ -379,34 +379,43 @@ function toggleForm(form, button, isEdit = false) {
     }
 }
 
-
 toggleForm(game_form, createNewEvent);
 toggleForm(court_form, addNewCourt);
 toggleForm(category_form, addNewCategory);
 
-function closeGameForm() {
+function closeForm(formId) {
     if (confirm("Are you sure you want to cancel editing and discard changes?")) {
-        const game_form = document.getElementById('game_form'); // Make sure game_form is defined
-        if (game_form) {
-            game_form.reset();
-            const select2Fields = game_form.querySelectorAll('.django-select2');
-            select2Fields.forEach(field => {
-                $(field).val(null).trigger('change'); // Reset the select2 field
-            });
-            game_form.style.display = 'none';
+        const form = document.getElementById(formId);
+        if (form) {
+            form.reset();
+            // Check if the form is game_form, then reset select2 fields
+            if (formId === 'game_form') {
+                const select2Fields = form.querySelectorAll('.django-select2');
+                select2Fields.forEach(field => {
+                    $(field).val(null).trigger('change'); // Reset the select2 field
+                });
+            }
+            form.style.display = 'none';
         } else {
-            console.error('Game form not found');
+            console.error(`Form with ID ${formId} not found`);
         }
     }
 }
 
-const cancelEditButton = document.getElementById('closeGameFormButton');
-
-if (cancelEditButton) {
-    cancelEditButton.addEventListener('click', closeGameForm);
-} else {
-    console.error('Cancel edit button not found');
+function attachCloseEvent(buttonId, formId) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+        button.addEventListener('click', function () {
+            closeForm(formId);
+        });
+    } else {
+        console.error(`Button with ID ${buttonId} not found`);
+    }
 }
+
+attachCloseEvent('closeGameFormButton', 'game_form');
+attachCloseEvent('closeCourtFormButton', 'court_form');
+attachCloseEvent('closeCategoryFormButton', 'category_form');
 
 function handleFormSubmission(form, successMessage, buttonName) {
     const modal = document.getElementById('confirmationModal');
