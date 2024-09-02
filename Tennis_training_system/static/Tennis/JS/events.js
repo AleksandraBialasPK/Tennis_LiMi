@@ -89,6 +89,8 @@ function appendEvent(event) {
 
     eventDiv.style.backgroundColor = backgroundColorHEX;
 
+    const warningIcon = event.warning ? `<i class="fa-solid fa-road-circle-exclamation" style="color: crimson; margin-right: 5px;"></i>` : '';
+
     eventDiv.innerHTML = `
         <div class="side-color" style="background-color: ${categoryColor};">
             <div class="picture-for-event">
@@ -96,7 +98,7 @@ function appendEvent(event) {
             </div>
         </div>
         <div class="event-desc">
-            <div class="event-name">${event.name}</div>
+            <div class="event-name">${warningIcon}${event.name}</div>
             <div class="event-time">${new Date(event.start_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - ${new Date(event.end_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
         </div>
     `;

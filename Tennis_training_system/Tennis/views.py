@@ -144,21 +144,25 @@ class DayView(LoginRequiredMixin, TemplateView):
             'start_date_and_time',
             'end_date_and_time',
             'creator',
-            'creator__profile_picture'
-        )
+            'creator__profile_picture',
+            'court__latitude',
+            'court__longitude'
+        ).order_by('start_date_and_time')
 
         events = list(events_query)
+        previous_event = None
 
-        for event in events:
-            event['start_date_and_time'] = event['start_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
-            event['end_date_and_time'] = event['end_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
-            start_time = event['start_date_and_time'].split(' ')[1]
-            end_time = event['end_date_and_time'].split(' ')[1]
+        for index, event in enumerate(events):
+            event['start_date_and_time_str'] = event['start_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
+            event['end_date_and_time_str'] = event['end_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
+            start_time = event['start_date_and_time_str'].split(' ')[1]
+            end_time = event['end_date_and_time_str'].split(' ')[1]
             start_time_minutes = self.convert_string_time_to_minutes(start_time)
             end_time_minutes = self.convert_string_time_to_minutes(end_time)
             duration = end_time_minutes - start_time_minutes
             event['margin_top'] = (start_time_minutes / 60) * 100
             event['height'] = (duration / 60) * 100
+            event['warning'] = False
 
             profile_picture = event.get('creator__profile_picture', '')
             if profile_picture:
@@ -167,6 +171,37 @@ class DayView(LoginRequiredMixin, TemplateView):
                 event['profile_picture_url'] = settings.STATIC_URL + 'images/Ola.png'
 
             event['is_creator'] = (event['creator'] == self.request.user.user_id)
+
+            if previous_event:
+                travel_time = self.calculate_travel_time_mapbox(
+                    previous_event['court__latitude'], previous_event['court__longitude'],
+                    event['court__latitude'], event['court__longitude'],
+                    MAPBOX_API_KEY
+                )
+
+                if travel_time is not None:
+                    time_available = (event['start_date_and_time'] - previous_event['end_date_and_time']).total_seconds() / 60
+
+                    if travel_time > time_available:
+                        event['warning'] = True
+
+            if index < len(events) - 1:  # Check if there is a following event
+                next_event = events[index + 1]
+
+                if next_event['court__latitude'] != event['court__latitude'] or next_event['court__longitude'] != event['court__longitude']:
+                    travel_time = self.calculate_travel_time_mapbox(
+                        event['court__latitude'], event['court__longitude'],
+                        next_event['court__latitude'], next_event['court__longitude'],
+                        MAPBOX_API_KEY
+                    )
+
+                    if travel_time is not None:
+                        time_available = (next_event['start_date_and_time'] - event['end_date_and_time']).total_seconds() / 60
+
+                        if travel_time > time_available:
+                            event['warning'] = True
+
+            previous_event = event
 
         date_info = {
             'current_date': date.strftime('%d %B %Y'),
