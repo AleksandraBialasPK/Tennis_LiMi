@@ -384,18 +384,26 @@ toggleForm(game_form, createNewEvent);
 toggleForm(court_form, addNewCourt);
 toggleForm(category_form, addNewCategory);
 
-const cancelEditButton = document.getElementById('cancel-edit');
-if (cancelEditButton) {
-    cancelEditButton.addEventListener('click', function () {
-        if (confirm("Are you sure you want to cancel editing and discard changes?")) {
+function closeGameForm() {
+    if (confirm("Are you sure you want to cancel editing and discard changes?")) {
+        const game_form = document.getElementById('game_form'); // Make sure game_form is defined
+        if (game_form) {
             game_form.reset();
-            const select2Fields = gameForm.querySelectorAll('.django-select2');
+            const select2Fields = game_form.querySelectorAll('.django-select2');
             select2Fields.forEach(field => {
                 $(field).val(null).trigger('change'); // Reset the select2 field
             });
             game_form.style.display = 'none';
+        } else {
+            console.error('Game form not found');
         }
-    });
+    }
+}
+
+const cancelEditButton = document.getElementById('closeGameFormButton');
+
+if (cancelEditButton) {
+    cancelEditButton.addEventListener('click', closeGameForm);
 } else {
     console.error('Cancel edit button not found');
 }
