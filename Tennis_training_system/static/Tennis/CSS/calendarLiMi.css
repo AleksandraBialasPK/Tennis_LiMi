@@ -77,6 +77,12 @@ body {
     outline: none;
 }
 
+#add-game-button {
+    height: 40px;
+    width: 25px;
+    margin-top: 18px;
+}
+
 #add-new-court-button, #create-new-category-button {
     color: #515151;
     background: none;
@@ -652,17 +658,23 @@ header > nav {
     width: 25%;
 }
 
+.game-form-fields{
+    margin-top: 15px;
+}
 
 .close-button {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    font-size: 32px;
+    cursor: pointer;
+    color: #333;
+    font-weight:500;
 }
 
 .close-button:hover,
 .close-button:focus {
-    color: black;
+    color: #046380;
     text-decoration: none;
     cursor: pointer;
 }

@@ -57,28 +57,31 @@
             {% csrf_token %}
             <input type="hidden" name="game_id" value="">
             {% if game_form %}
-                {% for field in game_form %}
-                    {% if field.name != 'end_date_of_recurrence' %}
-                    <div class="add-event-form-divs">
-                        {{ field.label_tag }} {{ field }}
-                        {% if field.help_text %}
-                            <span class="help-text">{{ field.help_text }}</span>
+                <span class="close-button" id="closeGameFormButton">&times;</span>
+                <div class="game-form-fields">
+                    {% for field in game_form %}
+                        {% if field.name != 'end_date_of_recurrence' %}
+                            <div class="add-event-form-divs">
+                                {{ field.label_tag }} {{ field }}
+                                {% if field.help_text %}
+                                    <span class="help-text">{{ field.help_text }}</span>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="error">{{ error }}</div>
+                                {% endfor %}
+                            </div>
                         {% endif %}
-                        {% for error in field.errors %}
-                            <div class="error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                {% endfor %}
+                    {% endfor %}
+                </div>
             {% else %}
                 <p>Formularz nie został przekazany.</p>
             {% endif %}
             <div id="recurrence-end-date" style="display: none;">
                 {{ game_form.end_date_of_recurrence.label_tag }} {{ game_form.end_date_of_recurrence }}
             </div>
-            <button type="submit" name="submit_game" id="add-game-button">Add</button>
+            <button type="submit" name="submit_game" id="add-game-button" class="create-new-event-button">Add</button>
             <button type="submit" name="update_game" id="update-game-button" style="display: none;">Update</button>
-            <button type="button" id="cancel-edit" class="cancel-button">Cancel</button>
+{#            <button type="button" id="cancel-edit" class="cancel-button">Cancel</button>#}
         </form>
 
         {% if request.user.is_staff %}
