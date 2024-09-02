@@ -250,11 +250,19 @@ class DayView(LoginRequiredMixin, TemplateView):
             print(f"User games found: {user_games.count()}")
 
             preceding_event = None
+            following_event = None
+            travel_time = None
+            time_available = None
+
             for game in user_games:
                 if game.end_date_and_time <= new_game_start:
                     preceding_event = game
-                    print(f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
-                else:
+                    print(
+                        f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
+                elif game.start_date_and_time >= new_game_end and not following_event:
+                    following_event = game
+                    print(
+                        f"Found following event: {following_event.name} starting at {following_event.start_date_and_time}")
                     break
 
             if preceding_event:
@@ -268,18 +276,56 @@ class DayView(LoginRequiredMixin, TemplateView):
                     if travel_time is not None:
                         time_available = (new_game_start - preceding_event.end_date_and_time).total_seconds() / 60
 
-                        if request.POST.get('confirm') == 'true':
-                            print('User confirmed to add event despite insufficient travel time.')#TODO change this
-                        else:
-                            return JsonResponse({
-                                'success': False,
-                                'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                           f"The time gap between games is {math.ceil(time_available)} minutes.\n"
-                                           f"Would you like to create the event anyway?",
-                                'confirm_needed': True
-                            })
+                        # Display warning only if travel_time > time_available
+                        if travel_time > time_available:
+                            if request.POST.get('confirm') == 'true':
+                                print('User confirmed to add event despite insufficient travel time.')
+                            else:
+                                return JsonResponse({
+                                    'success': False,
+                                    'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                               f"The time gap between the previous game and this one would be {math.ceil(time_available)} minutes.\n"
+                                               f"Would you like to create the event anyway?",
+                                    'confirm_needed': True
+                                })
                 else:
                     print("No need to check the commute time, same court.")
+            else:
+                print("No preceding event found. No travel time check needed.")
+
+            # Check travel time for the following event
+            if following_event and following_event.court != new_game_court:
+                travel_time = self.calculate_travel_time_mapbox(
+                    new_game_court.latitude, new_game_court.longitude,
+                    following_event.court.latitude, following_event.court.longitude,
+                    MAPBOX_API_KEY
+                )
+                print(f"Calculated travel time to following event: {travel_time} minutes")
+
+                if travel_time is not None:
+                    time_available = (following_event.start_date_and_time - new_game_end).total_seconds() / 60
+                    print(f"Time available after new event: {time_available} minutes")
+
+                    if travel_time > time_available:
+                        # Not enough time to travel
+                        print('Not enough time available to following event')
+                        return JsonResponse({
+                            'success': False,
+                            'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes. "
+                                       f"The time gap after the new game  and the following one is {math.ceil(time_available)} minutes. "
+                                       f"Would you like to create the event anyway?",
+                            'confirm_needed': True
+                        })
+                else:
+                    print("No need to check travel time for following event, same court.")
+
+            else:
+                print("No following event found. No travel time check needed.")
+
+            # If no preceding or following event conflict, save the game
+            if not request.POST.get('confirm') == 'true' and (travel_time and travel_time > time_available):
+                print('User did not confirm to add event with insufficient travel time.')
+                return JsonResponse({'success': False, 'message': 'Event not added due to insufficient travel time.'})
 
             game = game_form.save(commit=False)
             game.creator = self.request.user
