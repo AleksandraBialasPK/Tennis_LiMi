@@ -427,7 +427,6 @@ function closeFormWithoutReset(modalId) {
     if (modal) {
         modal.style.display = 'none';
         overlay.style.display = 'none';
-        deleteButton.removeEventListener('click', deleteHandler);
     } else {
         console.error(`Modal with ID ${modal} not found`);
     }
