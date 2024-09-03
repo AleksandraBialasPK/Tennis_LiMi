@@ -435,7 +435,7 @@ function attachCloseEvent(buttonId, formId) {
 attachCloseEvent('closeGameFormButton', 'game_form');
 attachCloseEvent('closeCourtFormButton', 'court_form');
 attachCloseEvent('closeCategoryFormButton', 'category_form');
-attachCloseEventWithoutReset('eventDetailsModal', 'closeGameDetailsButton');
+attachCloseEventWithoutReset('closeGameDetailsButton', 'eventDetailsModal');
 
 function handleFormSubmission(form, successMessage, buttonName) {
     const modal = document.getElementById('confirmationModal');
