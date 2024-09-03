@@ -67,11 +67,15 @@ function resetForm(form) {
     });
 }
 
+function setOverlayAndFormDisplayNone(form) {
+    form.style.display = 'none';
+    overlay.style.display = 'none';
+}
+
 function handleOutsideClick(form, button) {
     outsideOfForm.addEventListener('click', function hideForm(event) {
         if (!form.contains(event.target) && event.target !== button) {
-            form.style.display = 'none';
-            overlay.style.display = 'none';
+            setOverlayAndFormDisplayNone(form)
             resetForm(form);
             outsideOfForm.removeEventListener('click', hideForm);
         }
@@ -189,7 +193,6 @@ function showEventDetails(gameId) {
             const participantsList = modal.querySelector('.modal-participants-list');
             participantsList.innerHTML = '';
 
-            // Add each participant to the list
             data.participants.forEach(participant => {
                 const email = participant[0];
                 const username = participant[1];
@@ -262,14 +265,13 @@ function filterEvents() {
 function openEditForm(gameId) {
     const form = document.getElementById('game_form');
     const updateButton = document.getElementById('update-game-button');
+    const gameIdField = form.querySelector('input[name="game_id"]');
 
     form.setAttribute('data-game-id', gameId);
 
     form.style.display = 'block';
     overlay.style.display = 'block';
 
-
-    const gameIdField = form.querySelector('input[name="game_id"]');
     gameIdField.value = gameId;
 
     console.log("Setting hidden game_id field value:", gameIdField.value);
@@ -390,8 +392,6 @@ function toggleForm(form, button, isEdit = false) {
                 handleOutsideClick(form, button)
 
             } else {
-                form.style.display = 'none';
-                overlay.style.display = 'none';
                 resetForm(form)
             }
         });
@@ -430,11 +430,9 @@ function closeForm(formId) {
 
 function closeFormWithoutReset(modalId) {
     const modal = document.getElementById(modalId);
-    const overlay = document.getElementById('overlay');
 
     if (modal) {
-        modal.style.display = 'none';
-        overlay.style.display = 'none';
+        setOverlayAndFormDisplayNone(modal)
     } else {
         console.error(`Modal with ID ${modal} not found`);
     }
@@ -515,7 +513,6 @@ function handleFormSubmission(form, successMessage, buttonName) {
             if (data.success) {
                 alert(successMessage);
                 resetForm(form)
-                form.style.display = 'none';
                 loadEvents(selectedDate);
             } else if (data.confirm_needed) {
                 // Show custom modal with the warning message
@@ -546,7 +543,6 @@ function handleFormSubmission(form, successMessage, buttonName) {
                         if (data.success) {
                             alert(successMessage);
                             resetForm(form)
-                            form.style.display = 'none';
                             loadEvents(selectedDate);
                         } else {
                             alert('Failed to add game: ' + data.message);
