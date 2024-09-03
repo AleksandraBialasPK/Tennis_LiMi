@@ -43,6 +43,25 @@ document.addEventListener("DOMContentLoaded", function() {
     }, intervalTime);
 });
 
+function resetForm(form) {
+    form.reset();
+    const select2Fields = form.querySelectorAll('.django-select2');
+    select2Fields.forEach(field => {
+        $(field).val(null).trigger('change');
+    });
+}
+
+function handleOutsideClick(form, button) {
+    outsideOfForm.addEventListener('click', function hideForm(event) {
+        if (!form.contains(event.target) && event.target !== button) {
+            form.style.display = 'none';
+            overlay.style.display = 'none';
+            resetForm(form);
+            outsideOfForm.removeEventListener('click', hideForm);
+        }
+    });
+}
+
 function loadEvents(date) {
     $.ajax({
         url: "/day/",
@@ -371,26 +390,12 @@ function toggleForm(form, button, isEdit = false) {
                 form.style.display = 'block';
                 overlay.style.display = 'block';
 
-                outsideOfForm.addEventListener('click', function hideForm(event) {
-                    if (!form.contains(event.target) && event.target !== button) {
-                        form.style.display = 'none';
-                        overlay.style.display = 'none';
-                        form.reset();
-                        const select2Fields = form.querySelectorAll('.django-select2');
-                        select2Fields.forEach(field => {
-                        $(field).val(null).trigger('change');
-                        });
-                        outsideOfForm.removeEventListener('click', hideForm);
-                    }
-                });
+                handleOutsideClick(form, button)
+
             } else {
                 form.style.display = 'none';
                 overlay.style.display = 'none';
-                form.reset();
-                const select2Fields = form.querySelectorAll('.django-select2');
-                select2Fields.forEach(field => {
-                    $(field).val(null).trigger('change');
-                });
+                resetForm(form)
             }
         });
     } else {
@@ -512,11 +517,7 @@ function handleFormSubmission(form, successMessage, buttonName) {
         .then(data => {
             if (data.success) {
                 alert(successMessage);
-                form.reset();
-                const select2Fields = form.querySelectorAll('.django-select2');
-                select2Fields.forEach(field => {
-                    $(field).val(null).trigger('change'); // Reset the select2 field
-                });
+                resetForm(form)
                 form.style.display = 'none';
                 loadEvents(selectedDate);
             } else if (data.confirm_needed) {
@@ -547,11 +548,7 @@ function handleFormSubmission(form, successMessage, buttonName) {
                     .then(data => {
                         if (data.success) {
                             alert(successMessage);
-                            form.reset();
-                            const select2Fields = form.querySelectorAll('.django-select2');
-                            select2Fields.forEach(field => {
-                                $(field).val(null).trigger('change'); // Reset the select2 field
-                            });
+                            resetForm(form)
                             form.style.display = 'none';
                             loadEvents(selectedDate);
                         } else {
