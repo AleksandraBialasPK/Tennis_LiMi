@@ -151,6 +151,9 @@ body {
     position: fixed;
     top: 18%;
     left: 43%;
+    min-width: 600px;
+    width: 600px;
+    max-width: 600px;
     transform: translate(-50%);
     display: flex;
     flex-direction: column;
@@ -579,6 +582,7 @@ header > nav {
 
 .event-tile {
     position: absolute;
+    cursor: pointer;
     width: 200px;
     border-radius: 5px;
     display: flex;
@@ -688,7 +692,7 @@ header > nav {
     border-radius: 5px;
     border: 2px solid #046380;
     background-color: #ffffff;
-    padding: 2em;
+    padding: 40px;
     z-index: 3;
 }
 
