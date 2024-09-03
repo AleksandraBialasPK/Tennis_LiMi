@@ -11,6 +11,8 @@ let selectedDate;
 
 document.addEventListener("DOMContentLoaded", function() {
     let selectedDate = new Date().toISOString().split('T')[0];
+    const intervalTime = 10000;
+    const checkboxes = document.querySelectorAll('.checkbox-event');
 
     loadEvents(selectedDate);
 
@@ -37,7 +39,21 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    const intervalTime = 10000;
+    checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const color = this.getAttribute('data-color');
+                if (this.checked) {
+                    this.style.backgroundColor = color;
+                    this.style.borderColor = color;
+                } else {
+                    this.style.backgroundColor = 'rgba(0,0,0,0)';
+                    this.style.borderColor = '#ddd';
+                }
+            });
+
+            checkbox.dispatchEvent(new Event('change'));
+        });
+
     setInterval(function() {
         loadEvents(selectedDate);
     }, intervalTime);
@@ -220,25 +236,6 @@ function hexToRGBA(hex, alpha) {
 
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
-
-document.addEventListener("DOMContentLoaded", function() {
-    const checkboxes = document.querySelectorAll('.checkbox-event');
-
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const color = this.getAttribute('data-color');
-            if (this.checked) {
-                this.style.backgroundColor = color;
-                this.style.borderColor = color;
-            } else {
-                this.style.backgroundColor = 'rgba(0,0,0,0)';
-                this.style.borderColor = '#ddd';
-            }
-        });
-
-        checkbox.dispatchEvent(new Event('change'));
-    });
-});
 
 function filterEvents() {
     const checkedCategories = Array.from(document.querySelectorAll('.checkbox-event:checked')).map(checkbox => checkbox.id);
