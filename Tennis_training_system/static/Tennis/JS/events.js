@@ -1,3 +1,12 @@
+const createNewEvent = document.getElementById("create-new-game-button"),
+    addNewCourt = document.getElementById("add-new-court-button"),
+    addNewCategory = document.getElementById("create-new-category-button"),
+    game_form = document.getElementById('game_form'),
+    court_form = document.getElementById('court_form'),
+    category_form = document.getElementById('category_form'),
+    outsideOfForm = document.querySelector("main"),
+    overlay = document.getElementById('overlay');
+
 let selectedDate;
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -123,7 +132,6 @@ function formatDateTime(dateTimeString) {
 }
 
 function showEventDetails(gameId) {
-    console.log("Fetching details for game:", gameId);
     const gameIdData = gameId.game_id;
 
     $.ajax({
@@ -134,7 +142,6 @@ function showEventDetails(gameId) {
             'fetch_game_details': 'true'
         },
         success: function(data) {
-            console.log("Game details loaded for presenting:", data);
 
             const modal = document.getElementById('eventDetailsModal');
 
@@ -145,7 +152,7 @@ function showEventDetails(gameId) {
             modal.querySelector('.modal-court').textContent = `Court: ${data.court_name}`;
 
             const participantsList = modal.querySelector('.modal-participants-list');
-            participantsList.innerHTML = ''; // Clear existing list items
+            participantsList.innerHTML = '';
 
             // Add each participant to the list
             data.participants.forEach(participant => {
@@ -179,11 +186,8 @@ function showEventDetails(gameId) {
             }
 
             modal.style.display = 'block';
+            overlay.style.display = 'block';
 
-            const closeModalButton = document.getElementById('closeModalButton');
-            closeModalButton.addEventListener('click', function() {
-                modal.style.display = 'none';
-            });
         },
         error: function(jqXHR, textStatus, errorThrown) {
             console.error('Failed to load game details:', textStatus, errorThrown);
@@ -192,13 +196,6 @@ function showEventDetails(gameId) {
         }
     });
 }
-
-window.onclick = function(event) {
-    const modal = document.getElementById('eventDetailsModal');
-    if (event.target === modal) {
-        modal.style.display = 'none';
-    }
-};
 
 function hexToRGBA(hex, alpha) {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -252,8 +249,10 @@ function filterEvents() {
 function openEditForm(gameId) {
     const form = document.getElementById('game_form');
     form.setAttribute('data-game-id', gameId);
+
     form.style.display = 'block';
-    console.log("Opening edit form for game ID:", gameId);
+    overlay.style.display = 'block';
+
 
     const gameIdField = form.querySelector('input[name="game_id"]');
     gameIdField.value = gameId;
@@ -338,16 +337,6 @@ function deleteGame(gameId) {
     }
 }
 
-const createNewEvent = document.getElementById("create-new-game-button"),
-    addNewCourt = document.getElementById("add-new-court-button"),
-    addNewCategory = document.getElementById("create-new-category-button"),
-    game_form = document.getElementById('game_form'),
-    court_form = document.getElementById('court_form'),
-    category_form = document.getElementById('category_form'),
-    outsideOfForm = document.querySelector("main"),
-    overlay = document.getElementById('overlay');
-
-
 function toggleForm(form, button, isEdit = false) {
     if (form && button) {
         form.style.display = 'none';
@@ -362,9 +351,9 @@ function toggleForm(form, button, isEdit = false) {
                         form.style.display = 'none';
                         overlay.style.display = 'none';
                         form.reset();
-                        const select2Fields = gameForm.querySelectorAll('.django-select2');
+                        const select2Fields = form.querySelectorAll('.django-select2');
                         select2Fields.forEach(field => {
-                        $(field).val(null).trigger('change'); // Reset the select2 field
+                        $(field).val(null).trigger('change');
                         });
                         outsideOfForm.removeEventListener('click', hideForm);
                     }
@@ -373,9 +362,9 @@ function toggleForm(form, button, isEdit = false) {
                 form.style.display = 'none';
                 overlay.style.display = 'none';
                 form.reset();
-                const select2Fields = gameForm.querySelectorAll('.django-select2');
+                const select2Fields = form.querySelectorAll('.django-select2');
                 select2Fields.forEach(field => {
-                    $(field).val(null).trigger('change'); // Reset the select2 field
+                    $(field).val(null).trigger('change');
                 });
             }
         });
@@ -398,7 +387,7 @@ function closeForm(formId) {
             if (formId === 'game_form') {
                 const select2Fields = form.querySelectorAll('.django-select2');
                 select2Fields.forEach(field => {
-                    $(field).val(null).trigger('change'); // Reset the select2 field
+                    $(field).val(null).trigger('change');
                 });
             }
             form.style.display = 'none';
@@ -406,6 +395,29 @@ function closeForm(formId) {
         } else {
             console.error(`Form with ID ${formId} not found`);
         }
+    }
+}
+
+function closeFormWithoutReset(modalId) {
+    const modal = document.getElementById(modalId);
+    const overlay = document.getElementById('overlay');
+
+    if (modal) {
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
+    } else {
+        console.error(`Modal with ID ${modal} not found`);
+    }
+}
+
+function attachCloseEventWithoutReset(buttonId, modalId) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+        button.addEventListener('click', function () {
+            closeFormWithoutReset(modalId);
+        });
+    } else {
+        console.error(`Button with ID ${buttonId} not found`);
     }
 }
 
@@ -423,6 +435,7 @@ function attachCloseEvent(buttonId, formId) {
 attachCloseEvent('closeGameFormButton', 'game_form');
 attachCloseEvent('closeCourtFormButton', 'court_form');
 attachCloseEvent('closeCategoryFormButton', 'category_form');
+attachCloseEventWithoutReset('eventDetailsModal', 'closeGameDetailsButton');
 
 function handleFormSubmission(form, successMessage, buttonName) {
     const modal = document.getElementById('confirmationModal');
