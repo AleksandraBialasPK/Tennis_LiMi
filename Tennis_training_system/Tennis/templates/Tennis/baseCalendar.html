@@ -112,13 +112,13 @@
                     <span class="name">{{ request.user.username }}</span>
                 </div>
             </div>
-            <div>
-                <a href="{% url 'users_profile' %}" class="not-enhanced-buttons">Settings</a>
-            </div>
+            <div class="settings-logout-buttons">
+            <a href="{% url 'users_profile' %}" class="not-enhanced-buttons">Settings</a>
             <form action="{% url 'logout' %}" method="post">
                 {% csrf_token %}
                 <button type="submit" class="not-enhanced-buttons">Log out</button>
             </form>
+            </div>
         </div>
     </section>
     <div class="overlay" id="overlay"></div>

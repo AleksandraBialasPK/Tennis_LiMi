@@ -305,7 +305,6 @@ function openEditForm(gameId) {
 }
 
 function deleteGame(gameId) {
-    console.log("Deleting game ID:", gameId);
     console.log("Using selectedDate:", selectedDate);
     if (confirm('Are you sure you want to delete this game?')) {
         $.ajax({
@@ -322,7 +321,29 @@ function deleteGame(gameId) {
             success: function(data) {
                 if (data.success) {
                     alert('Game deleted successfully!');
-                    loadEvents(selectedDate); // Reload events for the current date
+                    loadEvents(selectedDate);
+
+                    const modal = document.getElementById('eventDetailsModal');
+                    const overlay = document.getElementById('overlay');
+
+                    if (modal) {
+                        modal.style.display = 'none'; // Hide the modal
+
+                        // Optional: Reset modal content (if needed)
+                        modal.querySelector('.modal-title').textContent = '';
+                        modal.querySelector('.modal-start-time').textContent = '';
+                        modal.querySelector('.modal-end-time').textContent = '';
+                        modal.querySelector('.modal-category').textContent = '';
+                        modal.querySelector('.modal-court').textContent = '';
+                        const participantsList = modal.querySelector('.modal-participants-list');
+                        if (participantsList) {
+                            participantsList.innerHTML = '';
+                        }
+                    }
+
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
                 } else {
                     alert('Failed to delete game: ' + data.message);
                 }
@@ -378,7 +399,8 @@ function closeForm(formId) {
     if (confirm("Are you sure you want to cancel editing and discard changes?")) {
         const form = document.getElementById(formId);
         const overlay = document.getElementById('overlay');
-        
+        const eventDetailsModal = document.getElementById('eventDetailsModal');
+
         if (form) {
             form.reset();
             if (formId === 'game_form') {
@@ -388,7 +410,9 @@ function closeForm(formId) {
                 });
             }
             form.style.display = 'none';
-            overlay.style.display = 'none';
+            if (eventDetailsModal && window.getComputedStyle(eventDetailsModal).display === 'none') {
+                overlay.style.display = 'none';
+            }
         } else {
             console.error(`Form with ID ${formId} not found`);
         }
@@ -558,7 +582,7 @@ function handleFormSubmission(form, successMessage, buttonName) {
     });
 }
 
-handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
+handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'add-game-button');
 handleFormSubmission(document.getElementById('court_form'), 'Court added successfully!', 'submit_court');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
 
