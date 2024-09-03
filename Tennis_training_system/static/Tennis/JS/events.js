@@ -167,11 +167,9 @@ function showEventDetails(gameId) {
             const deleteButton = modal.querySelector('.delete-button');
 
             if (data.is_creator) {
-                // Show edit and delete buttons if the user is the creator
                 editButton.style.display = 'inline-block';
                 deleteButton.style.display = 'inline-block';
 
-                // Set up click handlers
                 editButton.addEventListener('click', function() {
                     openEditForm(gameIdData);
                 });
@@ -180,7 +178,6 @@ function showEventDetails(gameId) {
                     deleteGame(gameIdData);
                 });
             } else {
-                // Hide buttons if the user is not the creator
                 editButton.style.display = 'none';
                 deleteButton.style.display = 'none';
             }
@@ -401,10 +398,12 @@ function closeForm(formId) {
 function closeFormWithoutReset(modalId) {
     const modal = document.getElementById(modalId);
     const overlay = document.getElementById('overlay');
+    const deleteButton = document.querySelector('.delete-button');
 
     if (modal) {
         modal.style.display = 'none';
         overlay.style.display = 'none';
+        deleteButton.removeEventListener('click', deleteHandler);
     } else {
         console.error(`Modal with ID ${modal} not found`);
     }
