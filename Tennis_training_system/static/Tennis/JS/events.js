@@ -245,6 +245,8 @@ function filterEvents() {
 
 function openEditForm(gameId) {
     const form = document.getElementById('game_form');
+    const updateButton = document.getElementById('update-game-button');
+
     form.setAttribute('data-game-id', gameId);
 
     form.style.display = 'block';
@@ -361,6 +363,11 @@ function toggleForm(form, button, isEdit = false) {
 
         button.addEventListener('click', () => {
             if (window.getComputedStyle(form).display === 'none') {
+                if (form.id === 'game_form') {
+                        document.getElementById('update-game-button').style.display = 'none';
+                        document.getElementById('add-game-button').style.display = 'inline';
+                }
+
                 form.style.display = 'block';
                 overlay.style.display = 'block';
 
@@ -422,7 +429,6 @@ function closeForm(formId) {
 function closeFormWithoutReset(modalId) {
     const modal = document.getElementById(modalId);
     const overlay = document.getElementById('overlay');
-    const deleteButton = document.querySelector('.delete-button');
 
     if (modal) {
         modal.style.display = 'none';
