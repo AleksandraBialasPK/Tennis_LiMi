@@ -117,7 +117,7 @@ body {
 .not-enhanced-buttons:active,
 .not-enhanced-buttons:focus,
 .not-enhanced-buttons:hover {
-    transform: scale(1.2);
+    transform: scale(1.15);
     outline: none;
     color: #046380;
 }
@@ -285,6 +285,7 @@ header > nav {
 .back-to-today:hover {
     color: #046380;
     transform: translateY(-50%) scale(1.1);
+    cursor: pointer;
 }
 
 .back-to-today i {
@@ -372,6 +373,8 @@ header > nav {
 .nav-arrows:hover {
     color: #046380;
     transform: scale(1.2);
+    font-weight: 550;
+    cursor: pointer;
 }
 
 .day-with-date {
@@ -733,6 +736,8 @@ header > nav {
     color: #046380;
     text-decoration: none;
     cursor: pointer;
+    transform: scale(1.2);
+    font-weight: 550;
 }
 
 .modal-participants-list {
