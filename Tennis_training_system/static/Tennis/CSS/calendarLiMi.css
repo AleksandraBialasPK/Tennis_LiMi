@@ -723,9 +723,15 @@ header > nav {
 }
 
 .modal-participants-list {
-    list-style: none;
-    padding: 0;
     margin: 10px 0 0 0;
+}
+
+.modal-participants-list li {
+    margin-bottom: 5px;
+}
+
+.modal-participants-list li::marker {
+    color: #046380;
 }
 
 .logout-mobile {
