@@ -106,10 +106,10 @@ body {
     font-weight: 500;
 }
 
-.not-enhanced-button:active,
-.not-enhanced-button:focus,
-.not-enhanced-button:hover {
-    transform: scale(1.1);
+.not-enhanced-buttons:active,
+.not-enhanced-buttons:focus,
+.not-enhanced-buttons:hover {
+    transform: scale(1.2);
     outline: none;
     color: #046380;
 }
