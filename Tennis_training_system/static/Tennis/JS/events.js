@@ -264,17 +264,10 @@ function filterEvents() {
 
 function openEditForm(gameId) {
     const form = document.getElementById('game_form');
-    const updateButton = document.getElementById('update-game-button');
     const gameIdField = form.querySelector('input[name="game_id"]');
 
     form.setAttribute('data-game-id', gameId);
-
-    form.style.display = 'block';
-    overlay.style.display = 'block';
-
     gameIdField.value = gameId;
-
-    console.log("Setting hidden game_id field value:", gameIdField.value);
 
     document.getElementById('update-game-button').style.display = 'inline';
     document.getElementById('add-game-button').style.display = 'none';
@@ -315,6 +308,8 @@ function openEditForm(gameId) {
 
                 $(participantSelect).trigger('change');
             }
+            form.style.display = 'block';
+            overlay.style.display = 'block';
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.error('Failed to load game details:', textStatus, errorThrown);
