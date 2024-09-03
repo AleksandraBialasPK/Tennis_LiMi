@@ -186,6 +186,11 @@ body {
     border-radius: 50%;
 }
 
+#update-game-button {
+    margin-top: 25px;
+    height: 50px;
+}
+
 .add-event-form-divs {
     display: flex;
     justify-content: center;
@@ -684,7 +689,7 @@ header > nav {
     position: fixed;
     top: 18%;
     left: 43%;
-    transform: translate(-50%,-70%);
+    transform: translate(-50%,-65%);
     display: flex;
     flex-direction: column;
     text-align: left;
@@ -702,7 +707,7 @@ header > nav {
 }
 
 .game-form-fields{
-    margin-top: 30px;
+    margin-top: 50px;
 }
 
 .close-button {

@@ -79,8 +79,8 @@
             <div id="recurrence-end-date" style="display: none;">
                 {{ game_form.end_date_of_recurrence.label_tag }} {{ game_form.end_date_of_recurrence }}
             </div>
-            <button type="submit" name="submit_game" id="add-game-button" class="create-new-event-button">Add</button>
-            <button type="submit" name="update_game" id="update-game-button" style="display: none;">Update</button>
+            <button type="submit" name="submit_game" id="add-game-button" class="create-new-event-button" style="display: none;">Add</button>
+            <button type="submit" name="update_game" id="update-game-button" style="display: none;" class="create-new-event-button">Update</button>
         </form>
 
         {% if request.user.is_staff %}
