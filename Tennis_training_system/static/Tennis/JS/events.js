@@ -344,19 +344,23 @@ const createNewEvent = document.getElementById("create-new-game-button"),
     game_form = document.getElementById('game_form'),
     court_form = document.getElementById('court_form'),
     category_form = document.getElementById('category_form'),
-    outsideOfForm = document.querySelector("main");
+    outsideOfForm = document.querySelector("main"),
+    overlay = document.getElementById('overlay');
 
 
 function toggleForm(form, button, isEdit = false) {
     if (form && button) {
         form.style.display = 'none';
+
         button.addEventListener('click', () => {
             if (window.getComputedStyle(form).display === 'none') {
-
                 form.style.display = 'block';
+                overlay.style.display = 'block';
+
                 outsideOfForm.addEventListener('click', function hideForm(event) {
                     if (!form.contains(event.target) && event.target !== button) {
                         form.style.display = 'none';
+                        overlay.style.display = 'none';
                         form.reset();
                         const select2Fields = gameForm.querySelectorAll('.django-select2');
                         select2Fields.forEach(field => {
@@ -367,6 +371,7 @@ function toggleForm(form, button, isEdit = false) {
                 });
             } else {
                 form.style.display = 'none';
+                overlay.style.display = 'none';
                 form.reset();
                 const select2Fields = gameForm.querySelectorAll('.django-select2');
                 select2Fields.forEach(field => {
@@ -386,9 +391,10 @@ toggleForm(category_form, addNewCategory);
 function closeForm(formId) {
     if (confirm("Are you sure you want to cancel editing and discard changes?")) {
         const form = document.getElementById(formId);
+        const overlay = document.getElementById('overlay');
+        
         if (form) {
             form.reset();
-            // Check if the form is game_form, then reset select2 fields
             if (formId === 'game_form') {
                 const select2Fields = form.querySelectorAll('.django-select2');
                 select2Fields.forEach(field => {
@@ -396,6 +402,7 @@ function closeForm(formId) {
                 });
             }
             form.style.display = 'none';
+            overlay.style.display = 'none';
         } else {
             console.error(`Form with ID ${formId} not found`);
         }

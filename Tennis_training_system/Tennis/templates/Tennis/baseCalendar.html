@@ -81,19 +81,20 @@
             </div>
             <button type="submit" name="submit_game" id="add-game-button" class="create-new-event-button">Add</button>
             <button type="submit" name="update_game" id="update-game-button" style="display: none;">Update</button>
-{#            <button type="button" id="cancel-edit" class="cancel-button">Cancel</button>#}
         </form>
 
         {% if request.user.is_staff %}
             <form class="new-event-form" id="court_form" method="POST">
                 {% csrf_token %}
                 {{ court_form.as_p }}
-                <button type="submit" name="submit_category" value="true">Add Court</button>
+                <span class="close-button" id="closeCourtFormButton">&times;</span>
+                <button type="submit" class="create-new-event-button add-court-category-buttons" name="submit_category" value="true">Add Court</button>
             </form>
             <form class="new-event-form" id="category_form" method="POST">
                 {% csrf_token %}
+                <span class="close-button" id="closeCategoryFormButton">&times;</span>
                 {{ category_form.as_p }}
-                <button type="submit" name="submit_category" value="true">Add Category</button>
+                <button type="submit" class="create-new-event-button add-court-category-buttons" name="submit_category" value="true">Add Category</button>
             </form>
         {% endif %}
         <div class="settings-and-logout">
@@ -116,6 +117,7 @@
             </form>
         </div>
     </section>
+    <div class="overlay" id="overlay"></div>
     <div id="confirmationModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close-button" id="closeModalButton">&times;</span>

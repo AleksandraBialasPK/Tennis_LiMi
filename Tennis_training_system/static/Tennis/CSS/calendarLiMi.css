@@ -17,7 +17,7 @@ body {
 /* Sidebar Navigation */
 .sidebar-nav {
     position: relative;
-    z-index: 2;
+    z-index: 4;
     display: grid;
     grid-template-rows: 3fr 2fr;
     padding: 20px 24px 20px;
@@ -77,10 +77,14 @@ body {
     outline: none;
 }
 
-#add-game-button {
-    height: 40px;
+.add-court-category-buttons {
+    height: 60px;
     width: 25px;
     margin-top: 18px;
+}
+
+#add-game-button {
+    height: 40px;
 }
 
 #add-new-court-button, #create-new-category-button {
@@ -156,6 +160,7 @@ body {
     border: 2px solid #046380;
     background-color: #ffffff;
     padding: 2em;
+    z-index: 4;
 }
 
 .user-icon-add-event {
@@ -183,6 +188,7 @@ body {
     justify-content: center;
     align-items: center;
     padding: 7px;
+    gap: 4px;
 }
 
 input {
@@ -208,7 +214,7 @@ header {
     min-height: 12%;
     position: relative;
     padding: 10px 10px;
-    z-index: 1;
+    z-index: 2;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.2);
     display: grid;
     grid-template-rows: 1fr 1fr;
@@ -640,7 +646,7 @@ header > nav {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 3;
     left: 0;
     top: 0;
     width: 100%;
@@ -658,8 +664,19 @@ header > nav {
     width: 25%;
 }
 
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+    z-index: 3;
+    display: none;
+}
+
 .game-form-fields{
-    margin-top: 15px;
+    margin-top: 30px;
 }
 
 .close-button {
