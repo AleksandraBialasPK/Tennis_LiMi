@@ -1,15 +1,11 @@
 from datetime import timedelta
-from urllib import request
-
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
-
 from .models import CustomUser, Game, Category, Court, RecurringGroup, RECURRENCE_CHOICES
 from django.contrib.auth.forms import AuthenticationForm
-from django_select2.forms import ModelSelect2MultipleWidget, ModelSelect2Widget
+from django_select2.forms import ModelSelect2MultipleWidget
 from django.contrib.auth.forms import PasswordChangeForm
-from django.core.validators import EmailValidator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,9 +23,9 @@ class ParticipantsWidget(ModelSelect2MultipleWidget):
 
     def build_attrs(self, *args, **kwargs):
         attrs = super().build_attrs(*args, **kwargs)
-        attrs['data-minimum-input-length'] = 1  # Adjust the minimum input length for search
-        attrs['data-ajax--cache'] = 'false'  # Disable caching for AJAX requests
-        attrs['data-ajax--delay'] = 250  # Set delay for AJAX requests
+        attrs['data-minimum-input-length'] = 2
+        attrs['data-ajax--cache'] = 'false'
+        attrs['data-ajax--delay'] = 250
         return attrs
 
 
@@ -50,8 +46,8 @@ class GameForm(forms.ModelForm):
         model = Game
         fields = ['name', 'category', 'start_date_and_time', 'end_date_and_time', 'court', 'participants', 'recurrence_type']
         widgets = {
-            'start_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'end_date_and_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'start_date_and_time': forms.TextInput(attrs={'class': 'datetime-input', 'placeholder': 'YYYY-MM-DD HH:MM'}),
+            'end_date_and_time': forms.TextInput(attrs={'class': 'datetime-input', 'placeholder': 'YYYY-MM-DD HH:MM'}),
         }
 
     category = forms.ModelChoiceField(queryset=Category.objects.all(), label="Category")
