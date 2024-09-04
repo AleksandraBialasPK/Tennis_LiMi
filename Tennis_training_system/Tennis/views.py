@@ -1,9 +1,12 @@
 import os
+
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.utils.timezone import now
 from Tennis_training_system import settings
+from django.db.models import F
 from django.conf import settings
 from django.views.decorators.cache import cache_control
 from django.utils.decorators import method_decorator
@@ -26,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class RegisterView(FormView):
-    template_name = 'register.html'
+    template_name = 'Tennis/register.html'
     form_class = CustomUserCreationForm
     success_url = reverse_lazy('login')
 
@@ -38,7 +41,7 @@ class RegisterView(FormView):
 
 class CustomLoginView(FormView):
     form_class = EmailAuthenticationForm
-    template_name = 'login.html'
+    template_name = 'Tennis/login.html'
     success_url = reverse_lazy('day')
     redirect_authenticated_user = True
 
@@ -65,6 +68,11 @@ class CustomLoginView(FormView):
 
 
 class CustomLogoutView(LogoutView):
+    """
+    View for displaying and managing games on a daily basis. This view handles
+    the display of games, their creation, update, and deletion, as well as
+    the addition of courts and categories.
+    """
     next_page = reverse_lazy('login')
 
     def dispatch(self, request, *args, **kwargs):
@@ -74,7 +82,7 @@ class CustomLogoutView(LogoutView):
 
 class DayView(LoginRequiredMixin, TemplateView):
     model = Game
-    template_name = 'day.html'
+    template_name = 'Tennis/day.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -136,6 +144,8 @@ class DayView(LoginRequiredMixin, TemplateView):
         events_query = Game.objects.filter(
             start_date_and_time__date=date,
             participant__user=user
+        ).annotate(
+            alert_status=F('participant__alert')
         ).values(
             'game_id',
             'name',
@@ -145,24 +155,21 @@ class DayView(LoginRequiredMixin, TemplateView):
             'end_date_and_time',
             'creator',
             'creator__profile_picture',
-            'court__latitude',
-            'court__longitude'
+            'alert',
         ).order_by('start_date_and_time')
 
         events = list(events_query)
-        previous_event = None
 
-        for index, event in enumerate(events):
-            event['start_date_and_time_str'] = event['start_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
-            event['end_date_and_time_str'] = event['end_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
-            start_time = event['start_date_and_time_str'].split(' ')[1]
-            end_time = event['end_date_and_time_str'].split(' ')[1]
+        for event in events:
+            event['start_date_and_time'] = event['start_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
+            event['end_date_and_time'] = event['end_date_and_time'].strftime('%Y-%m-%d %H:%M:%S')
+            start_time = event['start_date_and_time'].split(' ')[1]
+            end_time = event['end_date_and_time'].split(' ')[1]
             start_time_minutes = self.convert_string_time_to_minutes(start_time)
             end_time_minutes = self.convert_string_time_to_minutes(end_time)
             duration = end_time_minutes - start_time_minutes
             event['margin_top'] = (start_time_minutes / 60) * 100
             event['height'] = (duration / 60) * 100
-            event['warning'] = False
 
             profile_picture = event.get('creator__profile_picture', '')
             if profile_picture:
@@ -171,37 +178,6 @@ class DayView(LoginRequiredMixin, TemplateView):
                 event['profile_picture_url'] = settings.STATIC_URL + 'images/Ola.png'
 
             event['is_creator'] = (event['creator'] == self.request.user.user_id)
-
-            if previous_event:
-                travel_time = self.calculate_travel_time_mapbox(
-                    previous_event['court__latitude'], previous_event['court__longitude'],
-                    event['court__latitude'], event['court__longitude'],
-                    MAPBOX_API_KEY
-                )
-
-                if travel_time is not None:
-                    time_available = (event['start_date_and_time'] - previous_event['end_date_and_time']).total_seconds() / 60
-
-                    if travel_time > time_available:
-                        event['warning'] = True
-
-            if index < len(events) - 1:  # Check if there is a following event
-                next_event = events[index + 1]
-
-                if next_event['court__latitude'] != event['court__latitude'] or next_event['court__longitude'] != event['court__longitude']:
-                    travel_time = self.calculate_travel_time_mapbox(
-                        event['court__latitude'], event['court__longitude'],
-                        next_event['court__latitude'], next_event['court__longitude'],
-                        MAPBOX_API_KEY
-                    )
-
-                    if travel_time is not None:
-                        time_available = (next_event['start_date_and_time'] - event['end_date_and_time']).total_seconds() / 60
-
-                        if travel_time > time_available:
-                            event['warning'] = True
-
-            previous_event = event
 
         date_info = {
             'current_date': date.strftime('%d %B %Y'),
@@ -234,7 +210,7 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
-    def calculate_travel_time_mapbox(self, origin_lat, origin_lon, dest_lat, dest_lon, api_key):
+    def ask_MapBox_for_travel_time(self, origin_lat, origin_lon, dest_lat, dest_lon, api_key):
         """
         Calculate travel time between two locations using Mapbox Directions API.
 
@@ -264,148 +240,48 @@ class DayView(LoginRequiredMixin, TemplateView):
             print("Error:", data.get('message', 'Unknown error'))
             return None
 
-    @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
-    def handle_game_form(self, request):
-        game_form = GameForm(request.POST)
-        if game_form.is_valid():
-            new_game_start = game_form.cleaned_data['start_date_and_time']
-            new_game_end = game_form.cleaned_data['end_date_and_time']
-            new_game_court = game_form.cleaned_data['court']
+    def check_if_enough_time(self, request, event_end_time, next_event_start_time, event_court, next_event_court):
+        alert = False
+        if event_court != next_event_court:
+            travel_time = self.ask_MapBox_for_travel_time(
+                event_court.latitude, event_court.longitude,
+                next_event_court.latitude, next_event_court.longitude,
+                MAPBOX_API_KEY
+            )
 
+            if travel_time is not None:
+                time_available = (next_event_start_time - event_end_time) / 60
 
-            # Get user's events for the day, sorted by start time
-            user_games = Game.objects.filter(
-                creator=request.user,
-                start_date_and_time__date=new_game_start.date()
-            ).order_by('start_date_and_time')
-
-            preceding_event = None
-            following_event = None
-            travel_time = None
-            time_available = None
-
-            for game in user_games:
-                if game.end_date_and_time <= new_game_start:
-                    preceding_event = game
-                    print(
-                        f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
-                elif game.start_date_and_time >= new_game_end and not following_event:
-                    following_event = game
-                    print(
-                        f"Found following event: {following_event.name} starting at {following_event.start_date_and_time}")
-                    break
-
-            if preceding_event:
-                if preceding_event.court != new_game_court:
-                    travel_time = self.calculate_travel_time_mapbox(
-                        preceding_event.court.latitude, preceding_event.court.longitude,
-                        new_game_court.latitude, new_game_court.longitude,
-                        MAPBOX_API_KEY
-                    )
-
-                    if travel_time is not None:
-                        time_available = (new_game_start - preceding_event.end_date_and_time).total_seconds() / 60
-
-                        # Display warning only if travel_time > time_available
-                        if travel_time > time_available:
-                            if request.POST.get('confirm') == 'true':
-                                print('User confirmed to add event despite insufficient travel time.')
-                            else:
-                                return JsonResponse({
-                                    'success': False,
-                                    'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                               f"The time gap between the previous game and this one would be {math.ceil(time_available)} minutes.\n"
-                                               f"Would you like to create the event anyway?",
-                                    'confirm_needed': True
-                                })
-                else:
-                    print("No need to check the commute time, same court.")
-            else:
-                print("No preceding event found. No travel time check needed.")
-
-            # Check travel time for the following event
-            if following_event and following_event.court != new_game_court:
-                travel_time = self.calculate_travel_time_mapbox(
-                    new_game_court.latitude, new_game_court.longitude,
-                    following_event.court.latitude, following_event.court.longitude,
-                    MAPBOX_API_KEY
-                )
-
-                if travel_time is not None:
-                    time_available = (following_event.start_date_and_time - new_game_end).total_seconds() / 60
-
-                    if travel_time > time_available:
+                if travel_time > time_available:
+                    alert = True
+                    if request.POST.get('confirm') == 'true':
+                        print('User confirmed to add event despite insufficient travel time.')
+                    else:
                         return JsonResponse({
                             'success': False,
-                            'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes. "
-                                       f"The time gap after the new game  and the following one is {math.ceil(time_available)} minutes. "
-                                       f"Would you like to create the event anyway?",
+                            'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                       f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
+                                       f"Would you like to proceed anyway?",
                             'confirm_needed': True
-                        })
-                else:
-                    print("No need to check travel time for following event, same court.")
+                        }), travel_time, time_available, alert
+                return None, travel_time, time_available, alert
+        else:
+            print("No need to check the commute time, same court.")
+        return None, None, None, alert
 
-            else:
-                print("No following event found. No travel time check needed.")
+    @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
+    def handle_game_form(self, request):
+        """
+        Handle the creation of a new game.
+        """
+        return self._handle_game_form_logic(request, is_update=False)
 
-            # If no preceding or following event conflict, save the game
-            if not request.POST.get('confirm') == 'true' and (travel_time and travel_time > time_available):
-                return JsonResponse({'success': False, 'message': 'Event not added due to insufficient travel time.'})
-
-            game = game_form.save(commit=False)
-            game.creator = self.request.user
-            game.save()
-
-            participants = game_form.cleaned_data.get('participants', [])
-            print("Validated participants:", participants)
-
-            for user in participants:
-                Participant.objects.create(user=user, game=game)
-
-            game_form.save_m2m()
-
-            recurrence_type = game_form.cleaned_data.get('recurrence_type')
-            end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
-
-            if recurrence_type and end_date_of_recurrence:
-                current_start = game.start_date_and_time
-                current_end = game.end_date_and_time
-
-                while current_start.date() <= end_date_of_recurrence:
-                    if current_start != game.start_date_and_time:
-                        new_game = Game.objects.create(
-                            name=game.name,
-                            category=game.category,
-                            court=game.court,
-                            creator=game.creator,
-                            start_date_and_time=current_start,
-                            end_date_and_time=current_end,
-                            group=game.group
-                        )
-
-                        for user in participants:
-                            Participant.objects.create(user=user, game=new_game)
-
-                    if recurrence_type == 'daily':
-                        current_start += timedelta(days=1)
-                        current_end += timedelta(days=1)
-                    elif recurrence_type == 'weekly':
-                        current_start += timedelta(weeks=1)
-                        current_end += timedelta(weeks=1)
-                    elif recurrence_type == 'biweekly':
-                        current_start += timedelta(weeks=2)
-                        current_end += timedelta(weeks=2)
-                    elif recurrence_type == 'monthly':
-                        current_start = current_start.replace(month=current_start.month + 1)
-                        current_end = current_end.replace(month=current_end.month + 1)
-
-            return JsonResponse({'success': True, 'message': 'Game added successfully'})
-
-        return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
-
+    @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def handle_game_update(self, request):
+        """
+        Handle the update of an existing game.
+        """
         game_id = request.POST.get('game_id')
-
         if not game_id:
             return JsonResponse({'success': False, 'message': 'Game ID is required.'}, status=400)
 
@@ -414,93 +290,127 @@ class DayView(LoginRequiredMixin, TemplateView):
         except Http404:
             return JsonResponse({'success': False, 'message': 'Game not found or permission denied.'}, status=404)
 
-        form = GameForm(request.POST, instance=game)
+        return self._handle_game_form_logic(request, is_update=True, game_instance=game)
 
-        if form.is_valid():
-            updated_game_start = form.cleaned_data['start_date_and_time']
-            updated_game_end = form.cleaned_data['end_date_and_time']
-            updated_game_court = form.cleaned_data['court']
+    def _handle_game_form_logic(self, request, is_update=False, game_instance=None):
+        """
+        Core logic for handling both creation and update of a game.
+        This method processes the game form, checks for scheduling conflicts,
+        and handles recurrence logic.
+        """
+        game_form = GameForm(request.POST, instance=game_instance) if is_update else GameForm(request.POST)
 
-            user_games = Game.objects.filter(
-                creator=request.user,
-                start_date_and_time__date=updated_game_start.date()
-            ).order_by('start_date_and_time')
+        if not game_form.is_valid():
+            return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
-            preceding_event = None
-            following_event = None
+        new_game_start = game_form.cleaned_data['start_date_and_time']
+        new_game_end = game_form.cleaned_data['end_date_and_time']
+        new_game_court = game_form.cleaned_data['court']
 
-            for game in user_games:
-                if game.end_date_and_time <= updated_game_start and game.game_id != game_id:
-                    preceding_event = game
-                    print(
-                        f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
-                elif game.start_date_and_time >= updated_game_end and game.game_id != game_id and not following_event:
-                    following_event = game
-                    print(
-                        f"Found following event: {following_event.name} starting at {following_event.start_date_and_time}")
-                    break
+        user_games = Game.objects.filter(
+            creator=request.user,
+            start_date_and_time__date=new_game_start.date()
+        ).order_by('start_date_and_time')
 
-            if preceding_event and preceding_event.court != updated_game_court:
-                travel_time = self.calculate_travel_time_mapbox(
-                    preceding_event.court.latitude, preceding_event.court.longitude,
-                    updated_game_court.latitude, updated_game_court.longitude,
-                    MAPBOX_API_KEY
+        preceding_event = self.get_previous_event(user_games, new_game_start)
+        following_event = self.get_following_event(user_games, new_game_end)
+
+        if preceding_event:
+            response = self.check_if_enough_time(
+                request,
+                preceding_event.end_date_and_time,
+                new_game_start,
+                preceding_event.court,
+                new_game_court
+            )
+            if response:
+                return response
+
+        if following_event:
+            response = self.check_if_enough_time(
+                request,
+                new_game_end,
+                following_event.start_date_and_time,
+                new_game_court,
+                following_event.court
+            )
+            if response:
+                return response
+
+        game_instance = game_form.save(commit=False)
+        if not is_update:
+            game_instance.creator = self.request.user
+        game_instance.save()
+
+        participants = game_form.cleaned_data.get('participants', [])
+
+        if is_update:
+            game_instance.participant_set.all().delete()
+        for user in participants:
+            Participant.objects.create(user=user, game=game_instance)
+
+        game_form.save_m2m()
+
+        recurrence_type = game_form.cleaned_data.get('recurrence_type')
+        end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
+
+        if recurrence_type and end_date_of_recurrence:
+            self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
+
+        return JsonResponse({'success': True, 'message': 'Game added successfully'})
+
+    def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
+        """
+        Handles the creation of recurring game events based on recurrence type and end date.
+        """
+        current_start = game.start_date_and_time
+        current_end = game.end_date_and_time
+
+        while current_start.date() <= end_date_of_recurrence:
+            if current_start != game.start_date_and_time:
+                new_game = Game.objects.create(
+                    name=game.name,
+                    category=game.category,
+                    court=game.court,
+                    creator=game.creator,
+                    start_date_and_time=current_start,
+                    end_date_and_time=current_end,
+                    group=game.group
                 )
+                for user in participants:
+                    Participant.objects.create(user=user, game=new_game)
 
-                if travel_time is not None:
-                    time_available = (updated_game_start - preceding_event.end_date_and_time).total_seconds() / 60
-                    if travel_time > time_available:
-                        if request.POST.get('confirm') == 'true':
-                            print('User confirmed to update event despite insufficient travel time.')
-                        else:
-                            return JsonResponse({
-                                'success': False,
-                                'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                           f"The time gap between the previous game and this one would be {math.ceil(time_available)} minutes.\n"
-                                           f"Would you like to update the event anyway?",
-                                'confirm_needed': True
-                            })
+            if recurrence_type == 'daily':
+                current_start += timedelta(days=1)
+                current_end += timedelta(days=1)
+            elif recurrence_type == 'weekly':
+                current_start += timedelta(weeks=1)
+                current_end += timedelta(weeks=1)
+            elif recurrence_type == 'biweekly':
+                current_start += timedelta(weeks=2)
+                current_end += timedelta(weeks=2)
+            elif recurrence_type == 'monthly':
+                current_start += relativedelta(months=1)
+                current_end += relativedelta(months=1)
 
-                # Check travel time for following event
-            if following_event and following_event.court != updated_game_court:
-                travel_time = self.calculate_travel_time_mapbox(
-                    updated_game_court.latitude, updated_game_court.longitude,
-                    following_event.court.latitude, following_event.court.longitude,
-                    MAPBOX_API_KEY
-                )
+    def get_previous_event(self, user_games, new_game_start):
+        preceding_event = None
+        for game in user_games:
+            if game.end_date_and_time <= new_game_start:
+                preceding_event = game
+                print(f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
+            else:
+                break
+        return preceding_event
 
-                if travel_time is not None:
-                    time_available = (following_event.start_date_and_time - updated_game_end).total_seconds() / 60
-                    if travel_time > time_available:
-                        if request.POST.get('confirm') == 'true':
-                            print(
-                                'User confirmed to update event despite insufficient travel time to the following event.')
-                        else:
-                            return JsonResponse({
-                                'success': False,
-                                'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                           f"The time gap after the updated game and the following one is {math.ceil(time_available)} minutes.\n"
-                                           f"Would you like to update the event anyway?",
-                                'confirm_needed': True
-                            })
-
-            updated_game = form.save(commit=False)
-            updated_game.game_id = game_id
-            game.save()
-            participants = form.cleaned_data.get('participants', [])
-
-            # Clear existing participants and add the updated ones
-            updated_game.participant_set.all().delete()  # Remove current participants
-
-            for user in participants:
-                Participant.objects.create(user=user, game=updated_game)
-
-            form.save_m2m()
-
-            return JsonResponse({'success': True, 'message': 'Game updated successfully'})
-        else:
-            print("Form is invalid. Errors:", form.errors)
-            return JsonResponse({'success': False, 'errors': form.errors.as_json()}, status=400)
+    def get_following_event(self, user_games, new_game_end):
+        following_event = None
+        for game in user_games:
+            if game.start_date_and_time >= new_game_end:
+                following_event = game
+                print(f"Found following event: {following_event.name} starting at {following_event.start_date_and_time}")
+                break
+        return following_event
 
     def handle_game_delete(self, request):
         game_id = request.POST.get('game_id')
@@ -529,8 +439,9 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         return JsonResponse({'success': False, 'errors': category_form.errors.as_json()}, status=400)
 
+
 class UsersProfile(LoginRequiredMixin, View):
-    template_name = 'users_profile.html'
+    template_name = 'Tennis/users_profile.html'
 
     def get(self, request):
         profile_form = ProfilePictureUpdateForm()
@@ -588,4 +499,4 @@ class UsersProfile(LoginRequiredMixin, View):
 
 
 class WeekView(LoginRequiredMixin, TemplateView):
-    template_name = 'week.html'
+    template_name = 'Tennis/week.html'
