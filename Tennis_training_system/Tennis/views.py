@@ -509,7 +509,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                 )
                 if alert:
                     participant_instance.alert = True
-                    participant_instance.save()
+                participant_instance.travel_time = travel_time
+                participant_instance.time_available = time_available
+                participant_instance.save()
 
             participant_following_event = self.get_following_event(participant_games, new_game_end)
             if participant_following_event:
@@ -522,7 +524,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                 )
                 if alert:
                     participant_instance.alert = True
-                    participant_instance.save()
+                participant_instance.travel_time = travel_time
+                participant_instance.time_available = time_available
+                participant_instance.save()
 
         game_form.save_m2m()
 
