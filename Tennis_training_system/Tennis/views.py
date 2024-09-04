@@ -29,28 +29,59 @@ logger = logging.getLogger(__name__)
 
 
 class RegisterView(FormView):
+    """
+    View to handle the user registration process.
+    """
+
     template_name = 'Tennis/register.html'
     form_class = CustomUserCreationForm
     success_url = reverse_lazy('login')
 
     def form_valid(self, form):
+        """
+        Handle the form submission when valid data is provided.
+        Saves the new user and logs them in automatically.
+
+        :param form: The valid form containing the user's registration details.
+        :return: Redirects to the success URL after the form is successfully submitted.
+        """
         user = form.save()
         login(self.request, user)
         return super().form_valid(form)
 
 
 class CustomLoginView(FormView):
+    """
+    View to handle the user login process.
+    """
+
     form_class = EmailAuthenticationForm
     template_name = 'Tennis/login.html'
     success_url = reverse_lazy('day')
     redirect_authenticated_user = True
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Check if the user is already authenticated.
+        If so, redirect them to the success URL (the 'day' view).
+
+        :param request: The HTTP request object.
+        :return: A redirect if the user is authenticated, otherwise dispatch the view as normal.
+        """
+
         if request.user.is_authenticated:
             return redirect(self.success_url)
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        """
+        Handle the form submission when valid data is provided.
+        Authenticates the user using their email and password.
+
+        :param form: The valid login form containing the user's email and password.
+        :return: Redirects the authenticated user to the success URL, or reloads the form on failure.
+        """
+
         email = form.cleaned_data.get('username')
         password = form.cleaned_data.get('password')
         user = authenticate(username=email, password=password)
@@ -63,28 +94,56 @@ class CustomLoginView(FormView):
             return self.form_invalid(form)
 
     def form_invalid(self, form):
+        """
+        Handle the case when the form submission is invalid.
+        Displays an error message indicating an invalid email or password.
+
+        :param form: The invalid form containing errors.
+        :return: Reloads the login form with error messages.
+        """
+
         messages.error(self.request, 'Invalid email or password.')
         return super().form_invalid(form)
 
 
 class CustomLogoutView(LogoutView):
     """
-    View for displaying and managing games on a daily basis. This view handles
-    the display of games, their creation, update, and deletion, as well as
-    the addition of courts and categories.
+    View to handle the user logout process.
+    This view logs the user out and displays a success message upon logout.
     """
+
     next_page = reverse_lazy('login')
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Handle the logout process and display a success message after the user logs out.
+
+        :param request: The HTTP request object.
+        :return: Redirects to the next page (login page) after logging out.
+        """
+
         messages.success(request, "You have successfully logged out.")
         return super().dispatch(request, *args, **kwargs)
 
 
 class DayView(LoginRequiredMixin, TemplateView):
+    """
+    View for displaying and managing games on a daily basis. This view handles
+    the display of games, their creation, update, and deletion, as well as
+    the addition of courts and categories.
+    """
+
     model = Game
     template_name = 'Tennis/day.html'
 
     def get_context_data(self, **kwargs):
+        """
+        Get the context data for the template. Additional context is added for staff users.
+
+        :param kwargs: Additional context keyword arguments.
+        :return: A dictionary of context data.
+        """
+
         context = super().get_context_data(**kwargs)
         context.update(self.get_base_context())
         if self.request.user.is_staff:
@@ -92,6 +151,13 @@ class DayView(LoginRequiredMixin, TemplateView):
         return context
 
     def get_base_context(self):
+        """
+        Get the base context data used for rendering the template. This includes the hours,
+        breaklines, game form, and available categories.
+
+        :return: A dictionary containing base context data.
+        """
+
         return {
             'hours': range(1, 24),
             'breaklines': range(23),
@@ -100,6 +166,12 @@ class DayView(LoginRequiredMixin, TemplateView):
         }
 
     def get_staff_context(self):
+        """
+        Get additional context data for staff users, including court and category forms.
+
+        :return: A dictionary containing context data specific to staff users.
+        """
+
         return {
             'court_form': CourtForm(),
             'category_form': CategoryForm(),
@@ -107,6 +179,16 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def get(self, request, *args, **kwargs):
+        """
+        Handle GET requests to the view. This method checks if the request is an AJAX request
+        and processes it accordingly. Otherwise, it handles the request as a standard GET request.
+
+        :param request: The HTTP request object.
+        :param args: Additional positional arguments.
+        :param kwargs: Additional keyword arguments.
+        :return: A JSON response for AJAX requests or a rendered template response.
+        """
+
         if self.is_ajax(request):
             if 'fetch_game_details' in request.GET and 'game_id' in request.GET:
                 game_id = request.GET.get('game_id')
@@ -135,10 +217,24 @@ class DayView(LoginRequiredMixin, TemplateView):
             return super().get(request, *args, **kwargs)
 
     def is_ajax(self, request):
+        """
+        Determine if the current request is an AJAX request.
+
+        :param request: The HTTP request object.
+        :return: True if the request is an AJAX request, False otherwise.
+        """
+
         return request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'XMLHttpRequest' in request.headers.get(
             'X-Requested-With', '')
 
     def get_events_and_date_info(self, date):
+        """
+        Retrieve events and related date information for a specific date.
+
+        :param date: The date for which to retrieve events.
+        :return: A tuple containing a list of events and a dictionary with date information.
+        """
+
         user = self.request.user
 
         events_query = Game.objects.filter(
@@ -188,10 +284,28 @@ class DayView(LoginRequiredMixin, TemplateView):
         return events, date_info
 
     def convert_string_time_to_minutes(self, time_str):
+        """
+        Convert a time string in 'HH:MM:SS' format into the total number of minutes.
+
+        :param time_str: A string representing time in 'HH:MM:SS' format.
+        :return: The total number of minutes as an integer.
+        """
+
         hours, minutes, _ = map(int, time_str.split(':'))
         return hours * 60 + minutes
 
     def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests to the view. Processes various types of form submissions
+        including game updates, new game submissions, game deletions, and form submissions
+        for courts and categories.
+
+        :param request: The HTTP request object.
+        :param args: Additional positional arguments.
+        :param kwargs: Additional keyword arguments.
+        :return: A JSON response indicating success or failure of the request.
+        """
+
         if self.is_ajax(request):
             if 'update_game' in request.POST and request.POST.get('game_id'):
                 return self.handle_game_update(request)
@@ -241,6 +355,17 @@ class DayView(LoginRequiredMixin, TemplateView):
             return None
 
     def check_if_enough_time(self, request, event_end_time, next_event_start_time, event_court, next_event_court):
+        """
+        Check if there is enough time between two events to travel from one court to another.
+
+        :param request: The HTTP request object.
+        :param event_end_time: The end time of the preceding event.
+        :param next_event_start_time: The start time of the following event.
+        :param event_court: The court of the preceding event.
+        :param next_event_court: The court of the following event.
+        :return: A tuple containing a JSON response, travel time, available time, and alert status.
+        """
+
         alert = False
         if event_court != next_event_court:
             travel_time = self.ask_MapBox_for_travel_time(
@@ -272,15 +397,25 @@ class DayView(LoginRequiredMixin, TemplateView):
     @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def handle_game_form(self, request):
         """
-        Handle the creation of a new game.
+        Handle the creation of a new game. Uses the _handle_game_form_logic method
+        to process the form and create a new game instance.
+
+        :param request: The HTTP request object.
+        :return: A JSON response indicating success or failure of the game creation.
         """
+
         return self._handle_game_form_logic(request, is_update=False)
 
     @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def handle_game_update(self, request):
         """
-        Handle the update of an existing game.
+        Handle the update of an existing game. Uses the _handle_game_form_logic method
+        to process the form and update the existing game instance.
+
+        :param request: The HTTP request object.
+        :return: A JSON response indicating success or failure of the game update.
         """
+
         game_id = request.POST.get('game_id')
         if not game_id:
             return JsonResponse({'success': False, 'message': 'Game ID is required.'}, status=400)
@@ -294,10 +429,15 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     def _handle_game_form_logic(self, request, is_update=False, game_instance=None):
         """
-        Core logic for handling both creation and update of a game.
-        This method processes the game form, checks for scheduling conflicts,
-        and handles recurrence logic.
+        Core logic for handling both creation and update of a game. This method processes
+        the game form, checks for scheduling conflicts, and handles recurrence logic.
+
+        :param request: The HTTP request object.
+        :param is_update: Boolean indicating if this is an update operation.
+        :param game_instance: The game instance to update, if applicable.
+        :return: A JSON response indicating success or failure of the operation.
         """
+
         game_form = GameForm(request.POST, instance=game_instance) if is_update else GameForm(request.POST)
 
         if not game_form.is_valid():
@@ -362,7 +502,13 @@ class DayView(LoginRequiredMixin, TemplateView):
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
         Handles the creation of recurring game events based on recurrence type and end date.
+
+        :param game: The original game instance.
+        :param participants: List of participants for the game.
+        :param recurrence_type: The type of recurrence (e.g., daily, weekly).
+        :param end_date_of_recurrence: The end date for the recurrence.
         """
+
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
 
@@ -394,6 +540,14 @@ class DayView(LoginRequiredMixin, TemplateView):
                 current_end += relativedelta(months=1)
 
     def get_previous_event(self, user_games, new_game_start):
+        """
+        Get the most recent event that ends before the new game starts.
+
+        :param user_games: A queryset of the user's games.
+        :param new_game_start: The start time of the new game.
+        :return: The preceding event or None if no such event exists.
+        """
+
         preceding_event = None
         for game in user_games:
             if game.end_date_and_time <= new_game_start:
@@ -404,6 +558,14 @@ class DayView(LoginRequiredMixin, TemplateView):
         return preceding_event
 
     def get_following_event(self, user_games, new_game_end):
+        """
+        Get the next event that starts after the new game ends.
+
+        :param user_games: A queryset of the user's games.
+        :param new_game_end: The end time of the new game.
+        :return: The following event or None if no such event exists.
+        """
+
         following_event = None
         for game in user_games:
             if game.start_date_and_time >= new_game_end:
@@ -413,6 +575,14 @@ class DayView(LoginRequiredMixin, TemplateView):
         return following_event
 
     def handle_game_delete(self, request):
+        """
+        Handle the deletion of a game. Checks if the user is the creator of the game
+        and deletes it if permitted.
+
+        :param request: The HTTP request object.
+        :return: A JSON response indicating success or failure of the game deletion.
+        """
+
         game_id = request.POST.get('game_id')
         game = get_object_or_404(Game, game_id=game_id, creator=request.user)
 
@@ -424,6 +594,13 @@ class DayView(LoginRequiredMixin, TemplateView):
                                 status=403)
 
     def handle_court_form(self, request):
+        """
+        Handle the submission of a new court form. Validates and saves the court data.
+
+        :param request: The HTTP request object.
+        :return: A JSON response indicating success or failure of the court creation.
+        """
+
         court_form = CourtForm(request.POST)
         if court_form.is_valid():
             court_form.save()
@@ -432,6 +609,13 @@ class DayView(LoginRequiredMixin, TemplateView):
         return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
 
     def handle_category_form(self, request):
+        """
+        Handle the submission of a new category form. Validates and saves the category data.
+
+        :param request: The HTTP request object.
+        :return: A JSON response indicating success or failure of the category creation.
+        """
+
         category_form = CategoryForm(request.POST)
         if category_form.is_valid():
             category_form.save()
@@ -441,9 +625,23 @@ class DayView(LoginRequiredMixin, TemplateView):
 
 
 class UsersProfile(LoginRequiredMixin, View):
+    """
+    View for displaying and managing the user's profile. This view handles both
+    updating the profile picture and changing the user's password.
+    """
+
     template_name = 'Tennis/users_profile.html'
 
     def get(self, request):
+        """
+        Handle GET requests to display the user's profile page.
+        This includes a form for updating the profile picture and
+        a form for changing the password.
+
+        :param request: The HTTP request object.
+        :return: A rendered template response containing the profile and password forms.
+        """
+
         profile_form = ProfilePictureUpdateForm()
         password_form = CustomPasswordChangeForm(user=request.user)
 
@@ -455,6 +653,13 @@ class UsersProfile(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
     def save_profile_picture(self, profile_picture):
+        """
+        Save the uploaded profile picture to the media directory.
+
+        :param profile_picture: The uploaded profile picture file.
+        :return: The file path where the profile picture is saved.
+        """
+
         file_name = profile_picture.name
         file_path = os.path.join('profile_pictures', file_name)
         full_path = os.path.join(settings.MEDIA_ROOT, file_path)
@@ -468,6 +673,15 @@ class UsersProfile(LoginRequiredMixin, View):
         return file_path
 
     def post(self, request):
+        """
+        Handle POST requests for updating either the profile picture or the password.
+        This method processes the form submissions and handles form validation,
+        saving the updated profile picture or password if valid.
+
+        :param request: The HTTP request object.
+        :return: A rendered template response with updated forms and success/error messages.
+        """
+
         if 'profile_picture' in request.FILES:
             profile_form = ProfilePictureUpdateForm(request.POST, request.FILES)
             if profile_form.is_valid():
