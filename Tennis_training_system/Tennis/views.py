@@ -429,8 +429,9 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     def _handle_game_form_logic(self, request, is_update=False, game_instance=None):
         """
-        Core logic for handling both creation and update of a game. This method processes
-        the game form, checks for scheduling conflicts, and handles recurrence logic.
+        Core logic for handling both creation and update of a game.
+        This method processes the game form, checks for scheduling conflicts
+        for both the game creator and each participant, and handles recurrence logic.
 
         :param request: The HTTP request object.
         :param is_update: Boolean indicating if this is an update operation.
@@ -486,8 +487,42 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         if is_update:
             game_instance.participant_set.all().delete()
+
         for user in participants:
-            Participant.objects.create(user=user, game=game_instance)
+            if user == game_instance.creator:
+                continue
+            participant_instance = Participant.objects.create(user=user, game=game_instance)
+
+            participant_games = Game.objects.filter(
+                participant__user=user,
+                start_date_and_time__date=new_game_start.date()
+            ).order_by('start_date_and_time')
+
+            participant_preceding_event = self.get_previous_event(participant_games, new_game_start)
+            if participant_preceding_event:
+                response, travel_time, time_available, alert = self.check_if_enough_time(
+                    request,
+                    participant_preceding_event.end_date_and_time,
+                    new_game_start,
+                    participant_preceding_event.court,
+                    new_game_court
+                )
+                if alert:
+                    participant_instance.alert = True
+                    participant_instance.save()
+
+            participant_following_event = self.get_following_event(participant_games, new_game_end)
+            if participant_following_event:
+                response, travel_time, time_available, alert = self.check_if_enough_time(
+                    request,
+                    new_game_end,
+                    participant_following_event.start_date_and_time,
+                    new_game_court,
+                    participant_following_event.court
+                )
+                if alert:
+                    participant_instance.alert = True
+                    participant_instance.save()
 
         game_form.save_m2m()
 
