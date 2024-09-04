@@ -176,6 +176,9 @@ class Participant(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
     is_trainer = models.BooleanField(default=False)
+    time_trip = models.FloatField(null=True, blank=True)
+    time_window = models.FloatField(null=True, blank=True)
+    alert = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Participant {self.user} in game {self.game}"

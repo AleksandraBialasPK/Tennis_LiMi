@@ -143,7 +143,7 @@ function appendEvent(event) {
 
     eventDiv.style.backgroundColor = backgroundColorHEX;
 
-    const warningIcon = event.warning ? `<i class="fa-solid fa-road-circle-exclamation" style="color: crimson; margin-right: 5px;"></i>` : '';
+    const warningIcon = event.alert ? `<i class="fa-solid fa-road-circle-exclamation" style="color: crimson; margin-right: 5px;"></i>` : '';
 
     eventDiv.innerHTML = `
         <div class="side-color" style="background-color: ${categoryColor};">
