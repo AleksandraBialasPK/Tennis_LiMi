@@ -442,6 +442,7 @@ class DayView(LoginRequiredMixin, TemplateView):
         game_form = GameForm(request.POST, instance=game_instance) if is_update else GameForm(request.POST)
 
         if not game_form.is_valid():
+            print("Form validation errors:", form.errors)
             return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
         new_game_start = game_form.cleaned_data['start_date_and_time']

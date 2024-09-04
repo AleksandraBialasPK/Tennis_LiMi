@@ -466,23 +466,22 @@ attachCloseEvent('closeCourtFormButton', 'court_form');
 attachCloseEvent('closeCategoryFormButton', 'category_form');
 attachCloseEventWithoutReset('closeGameDetailsButton', 'eventDetailsModal');
 
-function handleFormSubmission(form, successMessage, buttonName) {
+async function handleFormSubmission(form, successMessage, buttonName) {
     const modal = document.getElementById('confirmationModal');
     const modalMessage = document.getElementById('modalMessage');
     const confirmYes = document.getElementById('confirmYes');
     const confirmNo = document.getElementById('confirmNo');
+    const submitButton = form.querySelector('button[type="submit"]');
 
-    form.addEventListener('submit', function(event) {
+    form.addEventListener('submit', async function (event) {
         event.preventDefault();
         let formData = new FormData(this);
 
-        formData.append(buttonName, 'true');
-
+        // Determine if this is a game form submission
         const isGameForm = (buttonName === 'submit_game' || buttonName === 'update_game');
+        const gameId = form.querySelector('[name="game_id"]')?.value || null;
 
-        if(isGameForm) {
-            const gameId = form.querySelector('[name="game_id"]').value;
-
+        if (isGameForm) {
             formData.delete('submit_game');
             formData.delete('update_game');
 
@@ -496,91 +495,97 @@ function handleFormSubmission(form, successMessage, buttonName) {
             formData.append(buttonName, 'true');
         }
 
-        fetch(window.location.href, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData,
-        })
-        .then(response => {
+        try {
+            submitButton.disabled = true;  // Disable submit button to prevent multiple submissions
+
+            let response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData,
+            });
+
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-            return response.json();
-        })
-        .then(data => {
+
+            let data = await response.json();
+
             if (data.success) {
                 alert(successMessage);
-                resetForm(form)
+                resetForm(form);
                 loadEvents(selectedDate);
             } else if (data.confirm_needed) {
-                // Show custom modal with the warning message
+                // Show the modal with the confirmation message
                 modalMessage.textContent = data.message;
                 modal.style.display = 'block';
 
-                // Yes button: User wants to add the game anyway
-                confirmYes.onclick = function() {
+                // Handle confirmation (Yes/No) modal buttons
+                confirmYes.onclick = async function () {
                     modal.style.display = 'none';
-                    formData.append('confirm', 'true');
+                    formData.append('confirm', 'true'); // Add the confirm flag
 
-                    // Re-send the form with the confirmation flag
-                    fetch(window.location.href, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData,
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
+                    // Re-send the form with confirmation
+                    try {
+                        let confirmResponse = await fetch(window.location.href, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: formData,
+                        });
+
+                        if (!confirmResponse.ok) {
+                            throw new Error(`HTTP error! Status: ${confirmResponse.status}`);
                         }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
+
+                        let confirmData = await confirmResponse.json();
+                        if (confirmData.success) {
                             alert(successMessage);
-                            resetForm(form)
+                            resetForm(form);
                             loadEvents(selectedDate);
                         } else {
-                            alert('Failed to add game: ' + data.message);
+                            alert('Failed to add game: ' + confirmData.message);
                         }
-                    })
-                    .catch(error => {
+                    } catch (error) {
                         console.error('Error:', error);
                         alert('Failed: An unexpected error occurred.');
-                    });
+                    }
                 };
 
-                // No button: User cancels the action
-                confirmNo.onclick = function() {
+                confirmNo.onclick = function () {
                     modal.style.display = 'none';
                 };
-            } else {
-                if (data.errors) {
-                    let errorMessages = '';
-                    for (let field in data.errors) {
-                        errorMessages += `${field}: ${data.errors[field].join(', ')}\n`;
-                    }
-                    alert('Failed: ' + errorMessages);
-                } else {
-                    alert('Failed: An unexpected error occurred.');
+
+                // Reset modal buttons to avoid multiple event bindings
+                confirmYes.onclick = null;
+                confirmNo.onclick = null;
+
+            } else if (data.errors) {
+                let errorMessages = '';
+                for (let field in data.errors) {
+                    errorMessages += `${field}: ${data.errors[field].join(', ')}\n`;
                 }
+                alert('Failed: ' + errorMessages);
+            } else {
+                alert('Failed: An unexpected error occurred.');
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error:', error);
             alert('Failed: An unexpected error occurred.');
-        });
+        } finally {
+            submitButton.disabled = false;  // Re-enable the submit button
+        }
     });
 }
 
-handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'add-game-button');
+handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
 handleFormSubmission(document.getElementById('court_form'), 'Court added successfully!', 'submit_court');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
+
 
 (function($) {
     $(document).ready(function() {
