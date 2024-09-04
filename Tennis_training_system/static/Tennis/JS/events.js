@@ -16,6 +16,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
     loadEvents(selectedDate);
 
+    flatpickr('.datetime-input', {
+    enableTime: true,
+    dateFormat: "Y-m-d H:i",
+    minuteIncrement: 5,
+    });
+
     document.querySelector('.prev-day-btn').addEventListener('click', function() {
         const date = this.getAttribute('data-date');
         selectedDate = date; // Update the selected date
