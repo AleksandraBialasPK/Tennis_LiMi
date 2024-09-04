@@ -251,7 +251,7 @@ class DayView(LoginRequiredMixin, TemplateView):
             'end_date_and_time',
             'creator',
             'creator__profile_picture',
-            'alert',
+            'alert_status',
         ).order_by('start_date_and_time')
 
         events = list(events_query)
