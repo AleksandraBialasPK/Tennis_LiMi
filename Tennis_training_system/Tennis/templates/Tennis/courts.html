@@ -42,9 +42,9 @@
                 {% for court in courts %}
                     <li class="court-item">
                         <span class="court-info">
-                            <span class="court-name">{{ court.name }}</span>,
-                            <span class="court-location">{{ court.city }}, {{ court.country }}</span>,
-                            <span class="court-address">{{ court.street }}, {{ court.building_number }}</span>
+                            <span class="court-name">{{ court.name }}</span>:
+                            <span class="court-address">{{ court.street }} {{ court.building_number }}</span>,
+                            <span class="court-location">{{ court.postal_code }} {{ court.city }}, {{ court.country }}</span>
                         </span>
                         <span class="edit-delete">
                             <button class="edit-button">

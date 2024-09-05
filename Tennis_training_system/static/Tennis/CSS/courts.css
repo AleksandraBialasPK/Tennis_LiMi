@@ -134,6 +134,19 @@ li::marker {
     gap: 5px;
 }
 
+.court-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    gap: 50px;
+}
+
+.court-info {
+    display: inline-block;
+    margin-right: 10px;
+}
+
 ul {
     min-width: 200px;
 }
