@@ -32,7 +32,6 @@
                 <div class="create-new-stuff-buttons">
                     <button class="create-new-event-button" id="create-new-game-button" type="button">Add a new game</button>
                     {% if request.user.is_staff %}
-                    <button class="create-new-event-button" id="add-new-court-button" type="button">Add a new court</button>
                     <button class="create-new-event-button" id="create-new-category-button" type="button">Add a new category</button>
                     {% endif %}
                 </div>
@@ -83,17 +82,10 @@
         </form>
 
         {% if request.user.is_staff %}
-            <form class="new-event-form" id="court_form" method="POST">
-                {% csrf_token %}
-                <span class="close-button" id="closeCourtFormButton">&times;</span>
-                <div class="game-form-fields">
-                    {{ court_form.as_p }}
-                </div>
-                <button type="submit" class="create-new-event-button add-court-category-buttons" name="submit_category" value="true">Add Court</button>
-            </form>
             <form class="new-event-form" id="category_form" method="POST">
                 {% csrf_token %}
                 <span class="close-button" id="closeCategoryFormButton">&times;</span>
+                <h2>Add a new category!</h2>
                 <div class="game-form-fields">
                     {{ category_form.as_p }}
                 </div>
@@ -112,6 +104,7 @@
                 </div>
             </div>
             <div class="settings-logout-buttons">
+            <a href="{% url 'courts' %}" class="not-enhanced-buttons">Courts</a>
             <a href="{% url 'users_profile' %}" class="not-enhanced-buttons">Settings</a>
             <form action="{% url 'logout' %}" method="post">
                 {% csrf_token %}
