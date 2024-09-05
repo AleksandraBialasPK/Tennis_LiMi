@@ -762,21 +762,6 @@ class CourtsView(LoginRequiredMixin, TemplateView):
             context['court_form'] = CourtForm()
         return context
 
-    # def post(self, request, *args, **kwargs):
-    #     """
-    #     Handle form submissions for adding a new court. Only accessible by admin users.
-    #     :param request: The HTTP request object.
-    #     :return: A JSON response indicating success or failure of the court creation.
-    #     """
-    #     if not request.user.is_staff:
-    #         return JsonResponse({'error': 'You do not have permission to perform this action'}, status=403)
-    #
-    #     court_form = CourtForm(request.POST)
-    #     if court_form.is_valid():
-    #         court_form.save()
-    #         return JsonResponse({'success': True, 'message': 'Court added successfully'})
-    #
-    #     return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
     def post(self, request, *args, **kwargs):
         """
         Handle form submissions for adding or updating a court.
@@ -796,3 +781,21 @@ class CourtsView(LoginRequiredMixin, TemplateView):
             return JsonResponse({'success': True, 'message': 'Court added/updated successfully'})
 
         return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
+
+
+    def handle_court_delete(self, request):
+        """
+        Handle the deletion of a court. Only admin users are allowed to delete a court.
+
+        :param request: The HTTP request object.
+        :return: A JSON response indicating success or failure of the court deletion.
+        """
+        court_id = request.POST.get('court_id')
+        court = get_object_or_404(Court, id=court_id)
+
+        if request.user.is_staff:
+            court.delete()
+            return JsonResponse({'success': True, 'message': 'Court deleted successfully'})
+        else:
+            return JsonResponse({'success': False, 'message': 'You do not have permission to delete this court'},
+                                status=403)

@@ -80,7 +80,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (data.success) {
                         alert(successMessage);  // Show success message
                         form.reset();  // Reset the form fields
-                        location.reload();  // Optionally reload the page or update the DOM dynamically
+                        form.style.display = 'none';
+                        if (overlay) overlay.style.display = 'none';
                     } else {
                         // Handle validation errors
                         let errorMessages = '';
@@ -98,7 +99,47 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Apply form submission logic for court creation or update
-    if (courtForm) {
-        handleFormSubmission(courtForm, 'Court added/updated successfully!', 'submit_court');
+    if (court_form) {
+        handleFormSubmission(court_form, 'Court added/updated successfully!', 'submit_court');
     }
+
+    const deleteButtons = document.querySelectorAll('.delete-court-button');  // Assuming each court has a delete button
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const courtId = this.dataset.courtId;  // Get court ID from data attribute
+            if (confirm('Are you sure you want to delete this court?')) {
+                const formData = new FormData();
+                formData.append('delete_court', 'true');
+                formData.append('court_id', courtId);
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,  // Django CSRF protection
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);  // Show success message
+                        location.reload();  // Optionally reload the page or update the DOM dynamically
+                    } else {
+                        alert('Failed: ' + data.message);  // Show failure message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed: An unexpected error occurred.');
+                });
+            }
+        });
+    });
 });
