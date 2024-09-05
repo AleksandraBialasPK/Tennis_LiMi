@@ -367,6 +367,9 @@ class DayView(LoginRequiredMixin, TemplateView):
         """
 
         alert = False
+        travel_time = None
+        time_available = None
+
         if event_court != next_event_court:
             travel_time = self.ask_MapBox_for_travel_time(
                 event_court.latitude, event_court.longitude,
@@ -382,14 +385,19 @@ class DayView(LoginRequiredMixin, TemplateView):
                     if request.POST.get('confirm') == 'true':
                         print('User confirmed to add event despite insufficient travel time.')
                     else:
+                        request.session['travel_time'] = travel_time
+                        request.session['time_available'] = time_available
+                        request.session['alert'] = alert
+
                         return JsonResponse({
                             'success': False,
                             'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
                                        f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
                                        f"Would you like to proceed anyway?",
                             'confirm_needed': True
-                        }), travel_time, time_available, alert
-                return None, travel_time, time_available, alert
+                        })
+            return None, travel_time, time_available, alert
+
         else:
             print("No need to check the commute time, same court.")
         return None, None, None, alert
@@ -506,8 +514,7 @@ class DayView(LoginRequiredMixin, TemplateView):
                     participant_preceding_event.court,
                     new_game_court
                 )
-                if alert:
-                    participant_instance.alert = True
+                participant_instance.alert = alert
                 participant_instance.travel_time = travel_time
                 participant_instance.time_available = time_available
                 participant_instance.save()
@@ -521,8 +528,7 @@ class DayView(LoginRequiredMixin, TemplateView):
                     new_game_court,
                     participant_following_event.court
                 )
-                if alert:
-                    participant_instance.alert = True
+                participant_instance.alert = alert
                 participant_instance.travel_time = travel_time
                 participant_instance.time_available = time_available
                 participant_instance.save()
