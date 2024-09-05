@@ -4,20 +4,11 @@ from django.db.models.signals import post_migrate
 import logging
 logger = logging.getLogger(__name__)
 
-# Role choices
 ROLE_CHOICES = [
     ('regular', 'regular'),
     ('admin', 'admin'),
 ]
 
-# Status choices for CreateGameRequest and ParticipantRequest
-STATUS_CHOICES = [
-    ('pending', 'Pending'),
-    ('accepted', 'Accepted'),
-    ('rejected', 'Rejected'),
-]
-
-# Recurrence type choices for RecurringGroup
 RECURRENCE_CHOICES = [
     ('daily', 'Daily'),
     ('weekly', 'Weekly'),
@@ -139,36 +130,6 @@ class Game(models.Model):
 
     def __str__(self):
         return f"Game {self.game_id} by {self.creator}"
-
-
-class CreateGameRequest(models.Model):
-    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='create_requests')
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    court = models.ForeignKey(Court, on_delete=models.CASCADE)
-    start_date_and_time = models.DateTimeField()
-    end_date_and_time = models.DateTimeField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
-    group = models.ForeignKey(RecurringGroup, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return f"Request by {self.sender}"
-
-
-class ParticipantRequest(models.Model):
-    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='participant_requests')
-    game = models.ForeignKey(Game, on_delete=models.CASCADE)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
-
-    def __str__(self):
-        return f"Request by {self.sender} for game {self.game}"
-
-
-class ParticipantReceiver(models.Model):
-    request = models.ForeignKey(CreateGameRequest, on_delete=models.CASCADE)
-    receiver = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"Receiver {self.receiver} for request {self.request}"
 
 
 class Participant(models.Model):
