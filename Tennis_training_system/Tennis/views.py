@@ -363,7 +363,7 @@ class DayView(LoginRequiredMixin, TemplateView):
         travel_time = None
         time_available = None
 
-        if event_court != next_event_court:
+        if event_court.court_id != next_event_court.court_id:
             travel_time = self.ask_MapBox_for_travel_time(
                 event_court.latitude, event_court.longitude,
                 next_event_court.latitude, next_event_court.longitude,
