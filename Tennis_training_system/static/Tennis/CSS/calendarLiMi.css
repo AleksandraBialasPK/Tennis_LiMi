@@ -739,7 +739,6 @@ header > nav {
     text-decoration: none;
     cursor: pointer;
     transform: scale(1.2);
-    font-weight: 550;
 }
 
 .modal-participants-list {
