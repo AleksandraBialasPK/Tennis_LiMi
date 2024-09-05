@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function() {
         handleFormSubmission(court_form, 'Court added/updated successfully!', 'submit_court');
     }
 
-    const deleteButtons = document.querySelectorAll('.delete-court-button');  // Assuming each court has a delete button
+    const deleteButtons = document.querySelectorAll('.delete-button');
 
     deleteButtons.forEach(button => {
         button.addEventListener('click', function() {
@@ -113,11 +113,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 formData.append('delete_court', 'true');
                 formData.append('court_id', courtId);
 
+                // Get CSRF token from the cookie or hidden input
+                const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
                 fetch(window.location.href, {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,  // Django CSRF protection
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-CSRFToken': csrftoken,  // Ensure the CSRF token is passed here
+                        'X-Requested-With': 'XMLHttpRequest'  // Identify as an AJAX request
                     },
                     body: formData
                 })
