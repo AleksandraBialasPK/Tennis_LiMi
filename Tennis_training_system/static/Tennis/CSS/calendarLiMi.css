@@ -616,6 +616,7 @@ header > nav {
 .delete-button:hover {
     color: #046380;
     transform: scale(1.1);
+    cursor: pointer;
 }
 
 .side-color {
