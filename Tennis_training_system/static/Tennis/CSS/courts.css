@@ -150,3 +150,21 @@ li::marker {
 ul {
     min-width: 200px;
 }
+
+.close-button {
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    font-size: 32px;
+    cursor: pointer;
+    color: #333;
+    font-weight:500;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #046380;
+    text-decoration: none;
+    cursor: pointer;
+    transform: scale(1.2);
+}
