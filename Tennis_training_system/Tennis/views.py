@@ -769,19 +769,20 @@ class CourtsView(LoginRequiredMixin, TemplateView):
         if not request.user.is_staff:
             return JsonResponse({'error': 'You do not have permission to perform this action'}, status=403)
 
-        court_id = request.POST.get('court_id')  # Check if this is an update
-        if court_id:
-            court = get_object_or_404(Court, id=court_id)
-            court_form = CourtForm(request.POST, instance=court)
-        else:
-            court_form = CourtForm(request.POST)
+        if 'delete_court' in request.POST:  # Handle court deletion
+            return self.handle_court_delete(request)
+        else:  # Handle court creation or update
+            court_id = request.POST.get('court_id')
+            if court_id:
+                court = get_object_or_404(Court, id=court_id)
+                court_form = CourtForm(request.POST, instance=court)
+            else:
+                court_form = CourtForm(request.POST)
 
-        if court_form.is_valid():
-            court_form.save()
-            return JsonResponse({'success': True, 'message': 'Court added/updated successfully'})
-
-        return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
-
+            if court_form.is_valid():
+                court_form.save()
+                return JsonResponse({'success': True, 'message': 'Court added/updated successfully'})
+            return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
 
     def handle_court_delete(self, request):
         """
@@ -791,7 +792,9 @@ class CourtsView(LoginRequiredMixin, TemplateView):
         :return: A JSON response indicating success or failure of the court deletion.
         """
         court_id = request.POST.get('court_id')
-        court = get_object_or_404(Court, id=court_id)
+        if not court_id:
+            return JsonResponse({'success': False, 'message': 'Court ID is missing'}, status=400)
+        court = get_object_or_404(Court, court_id=court_id)
 
         if request.user.is_staff:
             court.delete()
