@@ -68,10 +68,12 @@
                     <div class="game-form-fields">
                         {{ court_form.as_p }}
                     </div>
-                    <button type="submit" class="create-new-event-button add-court-category-buttons" name="submit_category" value="true">Add Court</button>
+                    <button type="submit" class="create-new-event-button add-court-category-buttons" name="submit_court" value="true" style="display: none;">Add Court</button>
+                    <button type="submit" class="create-new-event-button add-court-category-buttons" name="update_court" value="true" style="display: none;">Update Court</button>
                 </form>
             {% endif %}
         </section>
+        <div class="overlay" id="overlay"></div>
     </main>
 
     <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
