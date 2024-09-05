@@ -143,7 +143,7 @@ function appendEvent(event) {
 
     eventDiv.style.backgroundColor = backgroundColorHEX;
 
-    const warningIcon = event.alert ? `<i class="fa-solid fa-road-circle-exclamation" style="color: crimson; margin-right: 5px;"></i>` : '';
+    const warningIcon = event.warning ? `<i class="fa-solid fa-road-circle-exclamation" style="color: crimson; margin-right: 5px;"></i>` : '';
 
     eventDiv.innerHTML = `
         <div class="side-color" style="background-color: ${categoryColor};">
@@ -156,7 +156,7 @@ function appendEvent(event) {
             <div class="event-time">${new Date(event.start_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - ${new Date(event.end_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
         </div>
     `;
-        
+
     eventDiv.addEventListener('click', function() {
         showEventDetails(event);
     });
@@ -466,22 +466,23 @@ attachCloseEvent('closeCourtFormButton', 'court_form');
 attachCloseEvent('closeCategoryFormButton', 'category_form');
 attachCloseEventWithoutReset('closeGameDetailsButton', 'eventDetailsModal');
 
-async function handleFormSubmission(form, successMessage, buttonName) {
+function handleFormSubmission(form, successMessage, buttonName) {
     const modal = document.getElementById('confirmationModal');
     const modalMessage = document.getElementById('modalMessage');
     const confirmYes = document.getElementById('confirmYes');
     const confirmNo = document.getElementById('confirmNo');
-    const submitButton = form.querySelector('button[type="submit"]');
 
-    form.addEventListener('submit', async function (event) {
+    form.addEventListener('submit', function(event) {
         event.preventDefault();
         let formData = new FormData(this);
 
-        // Determine if this is a game form submission
-        const isGameForm = (buttonName === 'submit_game' || buttonName === 'update_game');
-        const gameId = form.querySelector('[name="game_id"]')?.value || null;
+        formData.append(buttonName, 'true');
 
-        if (isGameForm) {
+        const isGameForm = (buttonName === 'submit_game' || buttonName === 'update_game');
+
+        if(isGameForm) {
+            const gameId = form.querySelector('[name="game_id"]').value;
+
             formData.delete('submit_game');
             formData.delete('update_game');
 
@@ -495,97 +496,91 @@ async function handleFormSubmission(form, successMessage, buttonName) {
             formData.append(buttonName, 'true');
         }
 
-        try {
-            submitButton.disabled = true;  // Disable submit button to prevent multiple submissions
-
-            let response = await fetch(window.location.href, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData,
-            });
-
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData,
+        })
+        .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-
-            let data = await response.json();
-
+            return response.json();
+        })
+        .then(data => {
             if (data.success) {
                 alert(successMessage);
-                resetForm(form);
+                resetForm(form)
                 loadEvents(selectedDate);
             } else if (data.confirm_needed) {
-                // Show the modal with the confirmation message
+                // Show custom modal with the warning message
                 modalMessage.textContent = data.message;
                 modal.style.display = 'block';
 
-                // Handle confirmation (Yes/No) modal buttons
-                confirmYes.onclick = async function () {
+                // Yes button: User wants to add the game anyway
+                confirmYes.onclick = function() {
                     modal.style.display = 'none';
-                    formData.append('confirm', 'true'); // Add the confirm flag
+                    formData.append('confirm', 'true');
 
-                    // Re-send the form with confirmation
-                    try {
-                        let confirmResponse = await fetch(window.location.href, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: formData,
-                        });
-
-                        if (!confirmResponse.ok) {
-                            throw new Error(`HTTP error! Status: ${confirmResponse.status}`);
+                    // Re-send the form with the confirmation flag
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData,
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
                         }
-
-                        let confirmData = await confirmResponse.json();
-                        if (confirmData.success) {
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
                             alert(successMessage);
-                            resetForm(form);
+                            resetForm(form)
                             loadEvents(selectedDate);
                         } else {
-                            alert('Failed to add game: ' + confirmData.message);
+                            alert('Failed to add game: ' + data.message);
                         }
-                    } catch (error) {
+                    })
+                    .catch(error => {
                         console.error('Error:', error);
                         alert('Failed: An unexpected error occurred.');
-                    }
+                    });
                 };
 
-                confirmNo.onclick = function () {
+                // No button: User cancels the action
+                confirmNo.onclick = function() {
                     modal.style.display = 'none';
                 };
-
-                // Reset modal buttons to avoid multiple event bindings
-                confirmYes.onclick = null;
-                confirmNo.onclick = null;
-
-            } else if (data.errors) {
-                let errorMessages = '';
-                for (let field in data.errors) {
-                    errorMessages += `${field}: ${data.errors[field].join(', ')}\n`;
-                }
-                alert('Failed: ' + errorMessages);
             } else {
-                alert('Failed: An unexpected error occurred.');
+                if (data.errors) {
+                    let errorMessages = '';
+                    for (let field in data.errors) {
+                        errorMessages += `${field}: ${data.errors[field].join(', ')}\n`;
+                    }
+                    alert('Failed: ' + errorMessages);
+                } else {
+                    alert('Failed: An unexpected error occurred.');
+                }
             }
-        } catch (error) {
+        })
+        .catch(error => {
             console.error('Error:', error);
             alert('Failed: An unexpected error occurred.');
-        } finally {
-            submitButton.disabled = false;  // Re-enable the submit button
-        }
+        });
     });
 }
 
 handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
 handleFormSubmission(document.getElementById('court_form'), 'Court added successfully!', 'submit_court');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
-
 
 (function($) {
     $(document).ready(function() {

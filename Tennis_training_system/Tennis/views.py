@@ -375,7 +375,7 @@ class DayView(LoginRequiredMixin, TemplateView):
             )
 
             if travel_time is not None:
-                time_available = (next_event_start_time - event_end_time) / 60
+                time_available = (next_event_start_time - event_end_time).total_seconds() / 60
 
                 if travel_time > time_available:
                     alert = True
@@ -442,7 +442,7 @@ class DayView(LoginRequiredMixin, TemplateView):
         game_form = GameForm(request.POST, instance=game_instance) if is_update else GameForm(request.POST)
 
         if not game_form.is_valid():
-            print("Form validation errors:", form.errors)
+            print("Form validation errors:", game_form.errors)
             return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
         new_game_start = game_form.cleaned_data['start_date_and_time']
@@ -490,8 +490,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             game_instance.participant_set.all().delete()
 
         for user in participants:
-            if user == game_instance.creator:
-                continue
             participant_instance = Participant.objects.create(user=user, game=game_instance)
 
             participant_games = Game.objects.filter(
