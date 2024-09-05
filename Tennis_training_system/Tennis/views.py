@@ -18,7 +18,7 @@ from django.contrib.auth.views import LogoutView
 from django.shortcuts import get_object_or_404
 from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
 from django.views.generic import FormView, TemplateView, View
-from .models import Game, Category, Participant
+from .models import Game, Category, Participant, Court
 from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import timedelta, datetime
 from django.http import JsonResponse, Http404
@@ -755,3 +755,40 @@ class UsersProfile(LoginRequiredMixin, View):
             'password_form': password_form,
         }
         return render(request, self.template_name, context)
+
+
+class CourtsView(LoginRequiredMixin, TemplateView):
+    """
+    View to list all courts, and handle the updates and deletion. Updates and deletion can be done only by admins.
+    """
+    model = Court
+    template_name = 'Tennis/courts.html'
+
+    def get_context_data(self, **kwargs):
+        """
+        Get the context data for the template. Additional context is added for staff users.
+
+        :param kwargs: Additional context keyword arguments.
+        :return: A dictionary of context data.
+        """
+        context = super().get_context_data(**kwargs)
+        context['courts'] = Court.objects.all()
+        if self.request.user.is_staff:
+            context['court_form'] = CourtForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle form submissions for adding a new court. Only accessible by admin users.
+        :param request: The HTTP request object.
+        :return: A JSON response indicating success or failure of the court creation.
+        """
+        if not request.user.is_staff:
+            return JsonResponse({'error': 'You do not have permission to perform this action'}, status=403)
+
+        court_form = CourtForm(request.POST)
+        if court_form.is_valid():
+            court_form.save()
+            return JsonResponse({'success': True, 'message': 'Court added successfully'})
+
+        return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)

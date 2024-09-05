@@ -10,6 +10,7 @@ urlpatterns = [
     path('logout/', logout_then_login, name='logout'),
     path('day/', views.DayView.as_view(), name='day'),
     path('profile/', views.UsersProfile.as_view(), name='users_profile'),
+    path('courts', views.CourtsView.as_view(), name='courts'),
     path("select2/", include("django_select2.urls")),
     path('logout/', views.CustomLogoutView.as_view(), name='logout'),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

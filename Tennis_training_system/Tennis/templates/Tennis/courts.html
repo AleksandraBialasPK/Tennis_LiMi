@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pl">
+{% load static %}
+{% load widget_tweaks %}
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'CSS/users_profile.css' %}">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/favicon.svg' %}">
+    <title>Courts</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <button class="back-to-dashboard" onclick="window.location.href='{% url 'day' %}'">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <section class="courts-section">
+            <h1>Courts</h1>
+
+            <!-- Courts List -->
+            <ul class="courts-list">
+                {% for court in courts %}
+                    <li class="court-item">
+                        <span class="court-name">{{ court.name }}</span>
+                        <span class="court-location">{{ court.city }}, {{ court.country }}</span>
+                        <span class="court-address">{{ court.street }}, {{ court.building_number }}</span>
+                    </li>
+                {% empty %}
+                    <li>No courts available.</li>
+                {% endfor %}
+            </ul>
+
+            <!-- Court Form (Visible to staff users) -->
+            {% if user.is_staff %}
+                <h2>Add New Court</h2>
+                <form id="court_form" class="court-form" method="post">
+                    {% csrf_token %}
+                    <div class="form-group input-container">
+                        {{ court_form.name.label_tag }}
+                        {{ court_form.name|add_class:"input-field" }}
+                        {% for error in court_form.name.errors %}
+                            <div class="error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group input-container">
+                        {{ court_form.building_number.label_tag }}
+                        {{ court_form.building_number|add_class:"input-field" }}
+                        {% for error in court_form.building_number.errors %}
+                            <div class="error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group input-container">
+                        {{ court_form.street.label_tag }}
+                        {{ court_form.street|add_class:"input-field" }}
+                        {% for error in court_form.street.errors %}
+                            <div class="error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group input-container">
+                        {{ court_form.city.label_tag }}
+                        {{ court_form.city|add_class:"input-field" }}
+                        {% for error in court_form.city.errors %}
+                            <div class="error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group input-container">
+                        {{ court_form.postal_code.label_tag }}
+                        {{ court_form.postal_code|add_class:"input-field" }}
+                        {% for error in court_form.postal_code.errors %}
+                            <div class="error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group input-container">
+                        {{ court_form.country.label_tag }}
+                        {{ court_form.country|add_class:"input-field" }}
+                        {% for error in court_form.country.errors %}
+                            <div class="error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="submit-button">Add Court</button>
+                </form>
+
+                <div id="formErrors"></div>
+            {% endif %}
+        </section>
+    </main>
+
+    <script src="{% static 'JS/users_profile.js' %}"></script>
+    <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
+</body>
+</html>
