@@ -54,4 +54,51 @@ document.addEventListener("DOMContentLoaded", function() {
     } else {
         console.error('Add New Court button or court form not found in the DOM');
     }
+
+    function handleFormSubmission(form, successMessage, buttonName) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();  // Prevent default form submission behavior
+            let formData = new FormData(this);  // Collect form data
+            formData.append(buttonName, 'true');  // Append the button name (submit_court/update_court)
+
+            // Send the form data using fetch to handle submission
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,  // Django CSRF protection
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(successMessage);  // Show success message
+                        form.reset();  // Reset the form fields
+                        location.reload();  // Optionally reload the page or update the DOM dynamically
+                    } else {
+                        // Handle validation errors
+                        let errorMessages = '';
+                        for (let field in data.errors) {
+                            errorMessages += `${field}: ${data.errors[field].join(', ')}\n`;
+                        }
+                        alert('Failed: ' + errorMessages);  // Show error messages
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed: An unexpected error occurred.');
+                });
+        });
+    }
+
+    // Apply form submission logic for court creation or update
+    if (courtForm) {
+        handleFormSubmission(courtForm, 'Court added/updated successfully!', 'submit_court');
+    }
 });

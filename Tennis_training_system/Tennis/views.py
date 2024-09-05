@@ -638,21 +638,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             return JsonResponse({'success': False, 'message': 'You do not have permission to delete this game'},
                                 status=403)
 
-    def handle_court_form(self, request):
-        """
-        Handle the submission of a new court form. Validates and saves the court data.
-
-        :param request: The HTTP request object.
-        :return: A JSON response indicating success or failure of the court creation.
-        """
-
-        court_form = CourtForm(request.POST)
-        if court_form.is_valid():
-            court_form.save()
-            return JsonResponse({'success': True, 'message': 'Court added successfully'})
-
-        return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
-
     def handle_category_form(self, request):
         """
         Handle the submission of a new category form. Validates and saves the category data.
@@ -777,18 +762,37 @@ class CourtsView(LoginRequiredMixin, TemplateView):
             context['court_form'] = CourtForm()
         return context
 
+    # def post(self, request, *args, **kwargs):
+    #     """
+    #     Handle form submissions for adding a new court. Only accessible by admin users.
+    #     :param request: The HTTP request object.
+    #     :return: A JSON response indicating success or failure of the court creation.
+    #     """
+    #     if not request.user.is_staff:
+    #         return JsonResponse({'error': 'You do not have permission to perform this action'}, status=403)
+    #
+    #     court_form = CourtForm(request.POST)
+    #     if court_form.is_valid():
+    #         court_form.save()
+    #         return JsonResponse({'success': True, 'message': 'Court added successfully'})
+    #
+    #     return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
     def post(self, request, *args, **kwargs):
         """
-        Handle form submissions for adding a new court. Only accessible by admin users.
-        :param request: The HTTP request object.
-        :return: A JSON response indicating success or failure of the court creation.
+        Handle form submissions for adding or updating a court.
         """
         if not request.user.is_staff:
             return JsonResponse({'error': 'You do not have permission to perform this action'}, status=403)
 
-        court_form = CourtForm(request.POST)
+        court_id = request.POST.get('court_id')  # Check if this is an update
+        if court_id:
+            court = get_object_or_404(Court, id=court_id)
+            court_form = CourtForm(request.POST, instance=court)
+        else:
+            court_form = CourtForm(request.POST)
+
         if court_form.is_valid():
             court_form.save()
-            return JsonResponse({'success': True, 'message': 'Court added successfully'})
+            return JsonResponse({'success': True, 'message': 'Court added/updated successfully'})
 
         return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
