@@ -357,15 +357,8 @@ class DayView(LoginRequiredMixin, TemplateView):
     def check_if_enough_time(self, request, event_end_time, next_event_start_time, event_court, next_event_court):
         """
         Check if there is enough time between two events to travel from one court to another.
-
-        :param request: The HTTP request object.
-        :param event_end_time: The end time of the preceding event.
-        :param next_event_start_time: The start time of the following event.
-        :param event_court: The court of the preceding event.
-        :param next_event_court: The court of the following event.
-        :return: A tuple containing a JSON response, travel time, available time, and alert status.
+        Returns travel_time, time_available, and alert status.
         """
-
         alert = False
         travel_time = None
         time_available = None
@@ -382,25 +375,11 @@ class DayView(LoginRequiredMixin, TemplateView):
 
                 if travel_time > time_available:
                     alert = True
-                    if request.POST.get('confirm') == 'true':
-                        print('User confirmed to add event despite insufficient travel time.')
-                    else:
-                        request.session['travel_time'] = travel_time
-                        request.session['time_available'] = time_available
-                        request.session['alert'] = alert
+                    request.session['travel_time'] = travel_time
+                    request.session['time_available'] = time_available
+                    request.session['alert'] = alert
 
-                        return JsonResponse({
-                            'success': False,
-                            'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                       f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
-                                       f"Would you like to proceed anyway?",
-                            'confirm_needed': True
-                        })
-            return None, travel_time, time_available, alert
-
-        else:
-            print("No need to check the commute time, same court.")
-        return None, None, None, alert
+        return travel_time, time_available, alert
 
     @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def handle_game_form(self, request):
@@ -466,26 +445,38 @@ class DayView(LoginRequiredMixin, TemplateView):
         following_event = self.get_following_event(user_games, new_game_end)
 
         if preceding_event:
-            response = self.check_if_enough_time(
+            travel_time, time_available, alert = self.check_if_enough_time(
                 request,
                 preceding_event.end_date_and_time,
                 new_game_start,
                 preceding_event.court,
                 new_game_court
             )
-            if response:
-                return response
+            if alert and request.POST.get('confirm') != 'true':
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                               f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
+                               f"Would you like to proceed anyway?",
+                    'confirm_needed': True
+                })
 
         if following_event:
-            response = self.check_if_enough_time(
+            travel_time, time_available, alert = self.check_if_enough_time(
                 request,
                 new_game_end,
                 following_event.start_date_and_time,
                 new_game_court,
                 following_event.court
             )
-            if response:
-                return response
+            if alert and request.POST.get('confirm') != 'true':
+                return JsonResponse({
+                    'success': False,
+                    'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                               f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
+                               f"Would you like to proceed anyway?",
+                    'confirm_needed': True
+                })
 
         game_instance = game_form.save(commit=False)
         if not is_update:
@@ -507,13 +498,18 @@ class DayView(LoginRequiredMixin, TemplateView):
 
             participant_preceding_event = self.get_previous_event(participant_games, new_game_start)
             if participant_preceding_event:
-                response, travel_time, time_available, alert = self.check_if_enough_time(
-                    request,
-                    participant_preceding_event.end_date_and_time,
-                    new_game_start,
-                    participant_preceding_event.court,
-                    new_game_court
+                travel_time, time_available, alert = self.check_if_enough_time(
+                    request, participant_preceding_event.end_date_and_time, new_game_start,
+                    participant_preceding_event.court, new_game_court
                 )
+                if alert and request.POST.get('confirm') != 'true':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f"Commute time for participant {user.username} between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                   f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
+                                   f"Would you like to proceed anyway?",
+                        'confirm_needed': True
+                    })
                 participant_instance.alert = alert
                 participant_instance.travel_time = travel_time
                 participant_instance.time_available = time_available
@@ -521,13 +517,18 @@ class DayView(LoginRequiredMixin, TemplateView):
 
             participant_following_event = self.get_following_event(participant_games, new_game_end)
             if participant_following_event:
-                response, travel_time, time_available, alert = self.check_if_enough_time(
-                    request,
-                    new_game_end,
-                    participant_following_event.start_date_and_time,
-                    new_game_court,
-                    participant_following_event.court
+                travel_time, time_available, alert = self.check_if_enough_time(
+                    request, new_game_end, participant_following_event.start_date_and_time,
+                    new_game_court, participant_following_event.court
                 )
+                if alert and request.POST.get('confirm') != 'true':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f"Commute time for participant {user.username} between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                                   f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
+                                   f"Would you like to proceed anyway?",
+                        'confirm_needed': True
+                    })
                 participant_instance.alert = alert
                 participant_instance.travel_time = travel_time
                 participant_instance.time_available = time_available
