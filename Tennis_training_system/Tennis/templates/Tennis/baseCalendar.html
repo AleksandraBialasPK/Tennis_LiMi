@@ -28,10 +28,6 @@
 <body>
     <section class="sidebar-nav">
         <div class="navigation">
-            <div class="views-nav">
-                {% block day-week-nav %}
-                {% endblock %}
-            </div>
             <div class="events">
                 {% for category in categories %}
                 <label for="{{ category.name }}">

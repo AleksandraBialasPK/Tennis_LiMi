@@ -755,7 +755,3 @@ class UsersProfile(LoginRequiredMixin, View):
             'password_form': password_form,
         }
         return render(request, self.template_name, context)
-
-
-class WeekView(LoginRequiredMixin, TemplateView):
-    template_name = 'Tennis/week.html'
