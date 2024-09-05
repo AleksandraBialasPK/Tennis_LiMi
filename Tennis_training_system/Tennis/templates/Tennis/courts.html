@@ -5,12 +5,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="{% static 'CSS/users_profile.css' %}">
-    <link rel="stylesheet" href="{% static 'CSS/calendarLiMi.css' %}">
+    <link rel="stylesheet" href="{% static 'CSS/courts.css' %}">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" type="image/png" href="{% static 'images/favicon.svg' %}">
-    <title>Create Game</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -34,13 +32,28 @@
 
     <main class="main-content">
         <section class="courts-section">
-            <h1>Courts</h1>
+            <span class="court-with-add-new">
+                <h1>Courts</h1>
+                {% if user.is_staff %}
+                    <button class="add-new-court-button" id="add-new-court-button" type="button"><i class="fa-solid fa-plus"></i></button>
+                {% endif %}
+            </span>
             <ul class="courts-list">
                 {% for court in courts %}
                     <li class="court-item">
-                        <span class="court-name">{{ court.name }}</span>
-                        <span class="court-location">{{ court.city }}, {{ court.country }}</span>
-                        <span class="court-address">{{ court.street }}, {{ court.building_number }}</span>
+                        <span class="court-info">
+                            <span class="court-name">{{ court.name }}</span>,
+                            <span class="court-location">{{ court.city }}, {{ court.country }}</span>,
+                            <span class="court-address">{{ court.street }}, {{ court.building_number }}</span>
+                        </span>
+                        <span class="edit-delete">
+                            <button class="edit-button">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button class="delete-button">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </span>
                     </li>
                 {% empty %}
                     <li>No courts available.</li>
@@ -48,7 +61,6 @@
             </ul>
 
             {% if user.is_staff %}
-                <button class="create-new-event-button" id="add-new-court-button" type="button">Add a new court</button>
                 <form class="new-event-form" id="court_form" method="POST">
                     <span class="close-button" id="closeCourtFormButton">&times;</span>
                     <h2>Add a new court!</h2>
@@ -62,8 +74,7 @@
         </section>
     </main>
 
-    <script src="{% static 'JS/users_profile.js' %}"></script>
     <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
-    <script src="{% static 'JS/events.js' %}"></script>
+    <script src="{% static 'JS/courts.js' %}"></script>
 </body>
 </html>
