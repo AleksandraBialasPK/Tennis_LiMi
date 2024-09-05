@@ -670,6 +670,7 @@ header > nav {
     border: 1px solid #046380;
     border-radius: 4px;
     width: 25%;
+    z-index:5;
 }
 
 .overlay {
