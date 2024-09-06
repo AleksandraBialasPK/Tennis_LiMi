@@ -5,7 +5,8 @@ document.addEventListener("DOMContentLoaded", function() {
         overlay = document.getElementById('overlay'),
         editButtons = document.querySelectorAll('.edit-button'),
         updateCourtButton = document.querySelector('button[name="update_court"]'),
-        addCourtButton = document.querySelector('button[name="submit_court"]');
+        addCourtButton = document.querySelector('button[name="submit_court"]'),
+        formHeading = court_form.querySelector('h2');
 
     // Function to hide the form and overlay
     function hideForm(form) {
@@ -129,6 +130,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 court_form.querySelector('input[name="postal_code"]').value = data.postal_code;
                 court_form.querySelector('input[name="country"]').value = data.country;
 
+                formHeading.textContent = `Updating court: ${data.name}`;
+
                 // Switch form buttons to show "Update" instead of "Add"
                 updateCourtButton.style.display = 'inline';
                 addCourtButton.style.display = 'none';
@@ -145,6 +148,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     closeCourtFormButton.addEventListener('click', function() {
         court_form.reset();
+        formHeading.textContent = 'Add a new court!';
         court_form.querySelector('input[name="court_id"]').value = '';  // Reset court_id for new court creation
         updateCourtButton.style.display = 'none';
         addCourtButton.style.display = 'inline';
