@@ -9,8 +9,8 @@ from django.db.models import F
 from django.conf import settings
 from django.views.decorators.cache import cache_control
 from django.utils.decorators import method_decorator
-from Tennis_training_system.settings import MAPBOX_API_KEY
 import math
+from .utils import check_if_enough_time, get_previous_event, get_following_event
 from .forms import CustomUserCreationForm
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LogoutView
@@ -22,7 +22,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import timedelta, datetime
 from django.http import JsonResponse, Http404
 import logging
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -315,70 +314,10 @@ class DayView(LoginRequiredMixin, TemplateView):
             elif 'delete_game' in request.POST:
                 return self.handle_game_delete(request)
 
-            elif 'submit_court' in request.POST:
-                return self.handle_court_form(request)
-
             elif 'submit_category' in request.POST:
                 return self.handle_category_form(request)
 
         return JsonResponse({'error': 'Invalid request'}, status=400)
-
-    def ask_MapBox_for_travel_time(self, origin_lat, origin_lon, dest_lat, dest_lon, api_key):
-        """
-        Calculate travel time between two locations using Mapbox Directions API.
-
-        :param origin_lat: Latitude of the origin.
-        :param origin_lon: Longitude of the origin.
-        :param dest_lat: Latitude of the destination.
-        :param dest_lon: Longitude of the destination.
-        :param api_key: Mapbox API key.
-        :return: Travel time in minutes considering traffic.
-        """
-
-        url = f"https://api.mapbox.com/directions/v5/mapbox/driving-traffic/{origin_lon},{origin_lat};{dest_lon},{dest_lat}"
-        params = {
-            'access_token': api_key,
-            'geometries': 'geojson',
-            'overview': 'full',
-            'steps': 'true',
-        }
-        response = requests.get(url, params=params)
-        data = response.json()
-
-        if response.status_code == 200 and data['routes']:
-            travel_time_seconds = data['routes'][0]['duration']
-            travel_time_minutes = travel_time_seconds / 60
-            return travel_time_minutes
-        else:
-            print("Error:", data.get('message', 'Unknown error'))
-            return None
-
-    def check_if_enough_time(self, request, event_end_time, next_event_start_time, event_court, next_event_court):
-        """
-        Check if there is enough time between two events to travel from one court to another.
-        Returns travel_time, time_available, and alert status.
-        """
-        alert = False
-        travel_time = None
-        time_available = None
-
-        if event_court.court_id != next_event_court.court_id:
-            travel_time = self.ask_MapBox_for_travel_time(
-                event_court.latitude, event_court.longitude,
-                next_event_court.latitude, next_event_court.longitude,
-                MAPBOX_API_KEY
-            )
-
-            if travel_time is not None:
-                time_available = (next_event_start_time - event_end_time).total_seconds() / 60
-
-                if travel_time > time_available:
-                    alert = True
-                    request.session['travel_time'] = travel_time
-                    request.session['time_available'] = time_available
-                    request.session['alert'] = alert
-
-        return travel_time, time_available, alert
 
     @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
     def handle_game_form(self, request):
@@ -428,7 +367,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         game_form = GameForm(request.POST, instance=game_instance) if is_update else GameForm(request.POST)
 
         if not game_form.is_valid():
-            print("Form validation errors:", game_form.errors)
             return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
         new_game_start = game_form.cleaned_data['start_date_and_time']
@@ -440,11 +378,11 @@ class DayView(LoginRequiredMixin, TemplateView):
             start_date_and_time__date=new_game_start.date()
         ).order_by('start_date_and_time')
 
-        preceding_event = self.get_previous_event(user_games, new_game_start)
-        following_event = self.get_following_event(user_games, new_game_end)
+        preceding_event = get_previous_event(user_games, new_game_start)
+        following_event = get_following_event(user_games, new_game_end)
 
         if preceding_event:
-            travel_time, time_available, alert = self.check_if_enough_time(
+            travel_time, time_available, alert = check_if_enough_time(
                 request,
                 preceding_event.end_date_and_time,
                 new_game_start,
@@ -461,7 +399,7 @@ class DayView(LoginRequiredMixin, TemplateView):
                 })
 
         if following_event:
-            travel_time, time_available, alert = self.check_if_enough_time(
+            travel_time, time_available, alert = check_if_enough_time(
                 request,
                 new_game_end,
                 following_event.start_date_and_time,
@@ -495,9 +433,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                 start_date_and_time__date=new_game_start.date()
             ).order_by('start_date_and_time')
 
-            participant_preceding_event = self.get_previous_event(participant_games, new_game_start)
+            participant_preceding_event = get_previous_event(participant_games, new_game_start)
             if participant_preceding_event:
-                travel_time, time_available, alert = self.check_if_enough_time(
+                travel_time, time_available, alert = check_if_enough_time(
                     request, participant_preceding_event.end_date_and_time, new_game_start,
                     participant_preceding_event.court, new_game_court
                 )
@@ -514,9 +452,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                 participant_instance.time_available = time_available
                 participant_instance.save()
 
-            participant_following_event = self.get_following_event(participant_games, new_game_end)
+            participant_following_event = get_following_event(participant_games, new_game_end)
             if participant_following_event:
-                travel_time, time_available, alert = self.check_if_enough_time(
+                travel_time, time_available, alert = check_if_enough_time(
                     request, new_game_end, participant_following_event.start_date_and_time,
                     new_game_court, participant_following_event.court
                 )
@@ -582,41 +520,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             elif recurrence_type == 'monthly':
                 current_start += relativedelta(months=1)
                 current_end += relativedelta(months=1)
-
-    def get_previous_event(self, user_games, new_game_start):
-        """
-        Get the most recent event that ends before the new game starts.
-
-        :param user_games: A queryset of the user's games.
-        :param new_game_start: The start time of the new game.
-        :return: The preceding event or None if no such event exists.
-        """
-
-        preceding_event = None
-        for game in user_games:
-            if game.end_date_and_time <= new_game_start:
-                preceding_event = game
-                print(f"Found preceding event: {preceding_event.name} ending at {preceding_event.end_date_and_time}")
-            else:
-                break
-        return preceding_event
-
-    def get_following_event(self, user_games, new_game_end):
-        """
-        Get the next event that starts after the new game ends.
-
-        :param user_games: A queryset of the user's games.
-        :param new_game_end: The end time of the new game.
-        :return: The following event or None if no such event exists.
-        """
-
-        following_event = None
-        for game in user_games:
-            if game.start_date_and_time >= new_game_end:
-                following_event = game
-                print(f"Found following event: {following_event.name} starting at {following_event.start_date_and_time}")
-                break
-        return following_event
 
     def handle_game_delete(self, request):
         """
