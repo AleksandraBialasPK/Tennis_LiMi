@@ -136,7 +136,6 @@ class Participant(models.Model):
     participant_id = models.AutoField(primary_key=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
-    is_trainer = models.BooleanField(default=False)
     travel_time = models.FloatField(null=True, blank=True)
     time_available = models.FloatField(null=True, blank=True)
     alert = models.BooleanField(default=False)
