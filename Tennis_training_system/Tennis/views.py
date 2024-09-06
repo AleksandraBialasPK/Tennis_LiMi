@@ -334,7 +334,21 @@ class DayView(LoginRequiredMixin, TemplateView):
         except Http404:
             return JsonResponse({'success': False, 'message': 'Game not found or permission denied.'}, status=404)
 
-        return self._handle_game_form_logic(request, is_update=True, game_instance=game)
+        if game.group:
+            update_all = request.POST.get('update_all') == 'true'
+
+            if update_all:
+                # Fetch all games in the recurrence group
+                games_in_group = Game.objects.filter(group=game.group)
+                for group_game in games_in_group:
+                    self._handle_game_form_logic(request, is_update=True, game_instance=group_game)
+                return JsonResponse(
+                    {'success': True, 'message': 'All events in the recurrence group updated successfully'})
+            else:
+                return self._handle_game_form_logic(request, is_update=True, game_instance=game)
+        else:
+            # Handle normal game update if there's no recurrence group
+            return self._handle_game_form_logic(request, is_update=True, game_instance=game)
 
     def _handle_game_form_logic(self, request, is_update=False, game_instance=None):
         """

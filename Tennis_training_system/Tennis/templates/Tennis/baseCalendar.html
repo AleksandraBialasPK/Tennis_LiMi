@@ -94,6 +94,11 @@
                         {% endif %}
                     {% endfor %}
                 </div>
+                <div class="add-event-form-divs">
+                    <label for="update_all">Update:</label>
+                    <input type="radio" id="update_one" name="update_all" value="false" checked> Only this event
+                    <input type="radio" id="update_all" name="update_all" value="true"> All future events
+                </div>
             {% else %}
                 <p>Formularz nie został przekazany.</p>
             {% endif %}
