@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models.signals import post_migrate, pre_save, post_save
 from django.dispatch import receiver
 from .models import Role, Court
@@ -36,13 +37,13 @@ def set_lat_lon(sender, instance, **kwargs):
         else:
             print(f"Error: Geolocation not found for address: {address}")
 
+
 @receiver(post_save, sender=Court)
 def handle_court_update(sender, instance, **kwargs):
     """
     Signal to detect when a court's latitude or longitude changes.
     If latitude/longitude has changed, trigger travel time recalculation for affected games.
     """
-    # Fetch the previous state of the court (if it already exists)
     if instance.pk:
         try:
             old_instance = Court.objects.get(pk=instance.pk)
@@ -50,7 +51,5 @@ def handle_court_update(sender, instance, **kwargs):
             old_instance = None
 
         if old_instance:
-            # Check if latitude or longitude has changed
             if old_instance.latitude != instance.latitude or old_instance.longitude != instance.longitude:
-                # Latitude/Longitude has changed, trigger travel time recalculation
-                recalculate_travel_time_for_games(instance)
+                transaction.on_commit(lambda: recalculate_travel_time_for_games(instance))
