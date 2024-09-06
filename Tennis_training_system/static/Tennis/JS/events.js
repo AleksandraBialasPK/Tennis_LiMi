@@ -285,11 +285,24 @@ function openEditForm(gameId) {
         },
         success: function(data) {
             console.log("Game details loaded for editing:", data);
+            console.log("Group data:", data.group);
             form.querySelector('[name="name"]').value = data.name;
             form.querySelector('[name="start_date_and_time"]').value = data.start_date_and_time;
             form.querySelector('[name="end_date_and_time"]').value = data.end_date_and_time;
             form.querySelector('[name="category"]').value = data.category;
             form.querySelector('[name="court"]').value = data.court;
+
+            if (data.group) {
+                console.log("Appending update options"); // Check if this line is reached
+                const updateHtml = `
+                    <div class="add-event-form-divs">
+                        <label for="update_all">Update:</label>
+                        <input type="radio" id="update_one" name="update_all" value="false" checked> Only this event
+                        <input type="radio" id="update_all" name="update_all" value="true"> All future events in this group
+                    </div>
+                `;
+                form.insertAdjacentHTML('beforeend', updateHtml);
+            }
 
             const participantSelect = form.querySelector('[name="participants"]');
             if (participantSelect) {
@@ -312,6 +325,7 @@ function openEditForm(gameId) {
 
                 $(participantSelect).trigger('change');
             }
+
             form.style.display = 'block';
             overlay.style.display = 'block';
         },
