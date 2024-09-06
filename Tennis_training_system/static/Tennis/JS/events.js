@@ -1,5 +1,4 @@
 const createNewEvent = document.getElementById("create-new-game-button"),
-    addNewCourt = document.getElementById("add-new-court-button"),
     addNewCategory = document.getElementById("create-new-category-button"),
     game_form = document.getElementById('game_form'),
     court_form = document.getElementById('court_form'),
@@ -119,7 +118,7 @@ function updateEvents(data) {
     }
 
     if (data.current_date) {
-        document.getElementById('current-date').textContent = data.current_date;
+        document.getElementById('current-date').textContent = `${data.current_day_of_week},  ${data.current_date}`;
     }
     if (data.prev_date) {
         document.querySelector('.prev-day-btn').setAttribute('data-date', data.prev_date);
@@ -143,7 +142,7 @@ function appendEvent(event) {
 
     eventDiv.style.backgroundColor = backgroundColorHEX;
 
-    const warningIcon = event.warning ? `<i class="fa-solid fa-road-circle-exclamation" style="color: crimson; margin-right: 5px;"></i>` : '';
+    const warningIcon = event.alert_status ? `<i class="fa-solid fa-road-circle-exclamation" style="color: crimson; margin-right: 5px;"></i>` : '';
 
     eventDiv.innerHTML = `
         <div class="side-color" style="background-color: ${categoryColor};">
@@ -156,7 +155,7 @@ function appendEvent(event) {
             <div class="event-time">${new Date(event.start_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - ${new Date(event.end_date_and_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
         </div>
     `;
-        
+
     eventDiv.addEventListener('click', function() {
         showEventDetails(event);
     });
@@ -402,7 +401,6 @@ function toggleForm(form, button, isEdit = false) {
 }
 
 toggleForm(game_form, createNewEvent);
-toggleForm(court_form, addNewCourt);
 toggleForm(category_form, addNewCategory);
 
 function closeForm(formId) {
@@ -462,7 +460,6 @@ function attachCloseEvent(buttonId, formId) {
 }
 
 attachCloseEvent('closeGameFormButton', 'game_form');
-attachCloseEvent('closeCourtFormButton', 'court_form');
 attachCloseEvent('closeCategoryFormButton', 'category_form');
 attachCloseEventWithoutReset('closeGameDetailsButton', 'eventDetailsModal');
 
@@ -578,7 +575,7 @@ function handleFormSubmission(form, successMessage, buttonName) {
     });
 }
 
-handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'add-game-button');
+handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
 handleFormSubmission(document.getElementById('court_form'), 'Court added successfully!', 'submit_court');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
 
