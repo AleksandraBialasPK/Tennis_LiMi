@@ -383,11 +383,11 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         if preceding_event:
             travel_time, time_available, alert = check_if_enough_time(
-                request,
                 preceding_event.end_date_and_time,
                 new_game_start,
                 preceding_event.court,
-                new_game_court
+                new_game_court,
+                request
             )
             if alert and request.POST.get('confirm') != 'true':
                 return JsonResponse({
@@ -400,11 +400,11 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         if following_event:
             travel_time, time_available, alert = check_if_enough_time(
-                request,
                 new_game_end,
                 following_event.start_date_and_time,
                 new_game_court,
-                following_event.court
+                following_event.court,
+                request
             )
             if alert and request.POST.get('confirm') != 'true':
                 return JsonResponse({
@@ -436,8 +436,8 @@ class DayView(LoginRequiredMixin, TemplateView):
             participant_preceding_event = get_previous_event(participant_games, new_game_start)
             if participant_preceding_event:
                 travel_time, time_available, alert = check_if_enough_time(
-                    request, participant_preceding_event.end_date_and_time, new_game_start,
-                    participant_preceding_event.court, new_game_court
+                    participant_preceding_event.end_date_and_time, new_game_start,
+                    participant_preceding_event.court, new_game_court, request
                 )
                 if alert and request.POST.get('confirm') != 'true':
                     return JsonResponse({
@@ -455,8 +455,8 @@ class DayView(LoginRequiredMixin, TemplateView):
             participant_following_event = get_following_event(participant_games, new_game_end)
             if participant_following_event:
                 travel_time, time_available, alert = check_if_enough_time(
-                    request, new_game_end, participant_following_event.start_date_and_time,
-                    new_game_court, participant_following_event.court
+                    new_game_end, participant_following_event.start_date_and_time,
+                    new_game_court, participant_following_event.court, request
                 )
                 if alert and request.POST.get('confirm') != 'true':
                     return JsonResponse({

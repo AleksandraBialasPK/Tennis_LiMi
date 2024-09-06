@@ -1,6 +1,8 @@
 import math
 import requests
 from django.utils.timezone import now
+
+from Tennis_training_system import settings
 from .models import Game
 from datetime import timedelta
 
@@ -36,7 +38,7 @@ def check_if_enough_time(event_end_time, next_event_start_time, event_court, nex
     alert = False
     travel_time = None
     time_available = None
-    MAPBOX_API_KEY = 'YOUR_MAPBOX_API_KEY'  # Replace with your actual MapBox API Key
+    MAPBOX_API_KEY = settings.MAPBOX_API_KEY
 
     if event_court.court_id != next_event_court.court_id:
         travel_time = ask_MapBox_for_travel_time(
