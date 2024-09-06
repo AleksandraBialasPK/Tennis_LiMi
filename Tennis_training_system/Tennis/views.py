@@ -359,10 +359,10 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         game_instance = self._save_game_instance(game_form, game_instance, request, is_update)
 
+        game_form.save_m2m()
+
         self._handle_participants(request, participants, new_game_start, new_game_end, new_game_court, game_instance,
                                   is_update)
-
-        game_form.save_m2m()
 
         recurrence_type = game_form.cleaned_data.get('recurrence_type')
         end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
@@ -387,6 +387,8 @@ class DayView(LoginRequiredMixin, TemplateView):
         """
         Handle participant conflicts and save their data.
         """
+        conflicts = []
+
         if is_update:
             game_instance.participant_set.all().delete()
 
@@ -400,17 +402,31 @@ class DayView(LoginRequiredMixin, TemplateView):
 
             participant_preceding_event = get_previous_event(participant_games, new_game_start)
             if participant_preceding_event:
-                self._check_participant_conflict(
+                conflict = self._check_participant_conflict(
                     request, participant_instance, participant_preceding_event, new_game_start, new_game_court,
                     "preceding"
                 )
+                if conflict:
+                    conflicts.append(conflict)
 
             participant_following_event = get_following_event(participant_games, new_game_end)
             if participant_following_event:
-                self._check_participant_conflict(
+                conflict = self._check_participant_conflict(
                     request, participant_instance, new_game_end, participant_following_event.start_date_and_time,
                     new_game_court, "following"
                 )
+                if conflict:
+                    conflicts.append(conflict)
+
+        if conflicts and request.POST.get('confirm') != 'true':
+            return JsonResponse({
+                'success': False,
+                'message': f"There are conflicts for the following participants:\n" +
+                           "\n".join([
+                                         f"{conflict['participant']} has a time conflict (Travel: {math.ceil(conflict['travel_time'])} mins, Gap: {math.ceil(conflict['time_available'])} mins)"
+                                         for conflict in conflicts]),
+                'confirm_needed': True
+            })
 
     def _check_participant_conflict(self, request, participant_instance, preceding_event_or_end, new_game_start_or_end,
                                     new_game_court, event_type):
@@ -437,19 +453,18 @@ class DayView(LoginRequiredMixin, TemplateView):
             request
         )
 
-        if alert and request.POST.get('confirm') != 'true':
-            return JsonResponse({
-                'success': False,
-                'message': f"Commute time for participant {participant_instance.user.username} between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                           f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
-                           f"Would you like to proceed anyway?",
-                'confirm_needed': True
-            })
-
         participant_instance.alert = alert
         participant_instance.travel_time = travel_time
         participant_instance.time_available = time_available
         participant_instance.save()
+
+        if alert and request.POST.get('confirm') != 'true':
+            return {
+                'participant': participant_instance.user.username,
+                'travel_time': travel_time,
+                'time_available': time_available,
+            }
+        return None
 
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
