@@ -43,7 +43,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 5px;
+    gap: 10px;
 }
 
 .navigation {
@@ -114,8 +114,6 @@ body {
     font-weight: 500;
 }
 
-.not-enhanced-buttons:active,
-.not-enhanced-buttons:focus,
 .not-enhanced-buttons:hover {
     transform: scale(1.15);
     outline: none;
