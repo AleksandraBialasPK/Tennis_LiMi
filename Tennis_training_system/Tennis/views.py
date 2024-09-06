@@ -1,5 +1,4 @@
 import os
-
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib import messages
@@ -761,29 +760,6 @@ class CourtsView(LoginRequiredMixin, TemplateView):
         if self.request.user.is_staff:
             context['court_form'] = CourtForm()
         return context
-
-    # def get_court_data(self, request, court_id=None, *args, **kwargs):
-    #     """
-    #     Handle POST request to fetch court data for editing.
-    #     """
-    #     if not court_id:
-    #         court_id = request.POST.get('court_id')  # Get the court_id from POST data
-    #
-    #     court = get_object_or_404(Court, court_id=court_id)
-    #
-    #     if request.user.is_staff:
-    #         data = {
-    #             'name': court.name,
-    #             'building_number': court.building_number,
-    #             'street': court.street,
-    #             'city': court.city,
-    #             'postal_code': court.postal_code,
-    #             'country': court.country,
-    #             'latitude': court.latitude,
-    #             'longitude': court.longitude,
-    #         }
-    #         return JsonResponse(data)
-    #     return JsonResponse({'error': 'Unauthorized'}, status=403)
 
     def post(self, request, *args, **kwargs):
         """
