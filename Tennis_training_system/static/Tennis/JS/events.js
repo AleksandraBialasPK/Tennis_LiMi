@@ -1,5 +1,4 @@
 const createNewEvent = document.getElementById("create-new-game-button"),
-    addNewCourt = document.getElementById("add-new-court-button"),
     addNewCategory = document.getElementById("create-new-category-button"),
     game_form = document.getElementById('game_form'),
     court_form = document.getElementById('court_form'),
@@ -119,7 +118,7 @@ function updateEvents(data) {
     }
 
     if (data.current_date) {
-        document.getElementById('current-date').textContent = data.current_date;
+        document.getElementById('current-date').textContent = `${data.current_day_of_week},  ${data.current_date}`;
     }
     if (data.prev_date) {
         document.querySelector('.prev-day-btn').setAttribute('data-date', data.prev_date);
@@ -402,7 +401,6 @@ function toggleForm(form, button, isEdit = false) {
 }
 
 toggleForm(game_form, createNewEvent);
-toggleForm(court_form, addNewCourt);
 toggleForm(category_form, addNewCategory);
 
 function closeForm(formId) {
@@ -462,7 +460,6 @@ function attachCloseEvent(buttonId, formId) {
 }
 
 attachCloseEvent('closeGameFormButton', 'game_form');
-attachCloseEvent('closeCourtFormButton', 'court_form');
 attachCloseEvent('closeCategoryFormButton', 'category_form');
 attachCloseEventWithoutReset('closeGameDetailsButton', 'eventDetailsModal');
 
