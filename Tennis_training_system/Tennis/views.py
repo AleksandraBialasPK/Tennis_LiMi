@@ -504,20 +504,6 @@ class DayView(LoginRequiredMixin, TemplateView):
                 for user in participants:
                     Participant.objects.create(user=user, game=game_instance)
 
-    def _get_delta_by_recurrence_type(self, recurrence_type, idx):
-        """
-        Return the appropriate time delta based on recurrence type and index.
-        """
-        if recurrence_type == 'daily':
-            return timedelta(days=idx)
-        elif recurrence_type == 'weekly':
-            return timedelta(weeks=idx)
-        elif recurrence_type == 'biweekly':
-            return timedelta(weeks=2 * idx)
-        elif recurrence_type == 'monthly':
-            return relativedelta(months=idx)
-        return timedelta(0)
-
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
         Handles the creation of recurring game events based on recurrence type and end date.
@@ -531,35 +517,41 @@ class DayView(LoginRequiredMixin, TemplateView):
         end_date_of_recurrence = make_aware(datetime.combine(end_date_of_recurrence, time(23, 59)))
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
+        idx = 1
 
         while current_start <= end_date_of_recurrence:
-            print("I have entered while current_start <= end_date_of_recurrence:")
-            if current_start != game.start_date_and_time:
-                print("I am creating one game after another!")
-                new_game = Game.objects.create(
-                    name=game.name,
-                    category=game.category,
-                    court=game.court,
-                    creator=game.creator,
-                    start_date_and_time=current_start,
-                    end_date_and_time=current_end,
-                    group=game.group
-                )
-                for user in participants:
-                    Participant.objects.create(user=user, game=new_game)
+            print("I am creating one game after another!")
+            new_game = Game.objects.create(
+                name=game.name,
+                category=game.category,
+                court=game.court,
+                creator=game.creator,
+                start_date_and_time=current_start,
+                end_date_and_time=current_end,
+                group=game.group
+            )
+            for user in participants:
+                Participant.objects.create(user=user, game=new_game)
 
-            if recurrence_type == 'daily':
-                current_start += timedelta(days=1)
-                current_end += timedelta(days=1)
-            elif recurrence_type == 'weekly':
-                current_start += timedelta(weeks=1)
-                current_end += timedelta(weeks=1)
-            elif recurrence_type == 'biweekly':
-                current_start += timedelta(weeks=2)
-                current_end += timedelta(weeks=2)
-            elif recurrence_type == 'monthly':
-                current_start += relativedelta(months=1)
-                current_end += relativedelta(months=1)
+            delta = self._get_delta_by_recurrence_type(recurrence_type, idx)
+
+            current_start += delta
+            current_end += delta
+            idx += 1
+
+    def _get_delta_by_recurrence_type(self, recurrence_type, idx):
+        """
+        Return the appropriate time delta based on recurrence type and index.
+        """
+        if recurrence_type == 'daily':
+            return timedelta(days=idx)
+        elif recurrence_type == 'weekly':
+            return timedelta(weeks=idx)
+        elif recurrence_type == 'biweekly':
+            return timedelta(weeks=2 * idx)
+        elif recurrence_type == 'monthly':
+            return relativedelta(months=idx)
+        return timedelta(0)
 
     def handle_game_delete(self, request):
         """
