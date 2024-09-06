@@ -301,7 +301,7 @@ function openEditForm(gameId) {
                         <input type="radio" id="update_all" name="update_all" value="true"> All future events in this group
                     </div>
                 `;
-                form.insertAdjacentHTML('beforeend', updateHtml);
+                form.insertAdjacentHTML('beforebegin', updateHtml);
             }
 
             const participantSelect = form.querySelector('[name="participants"]');
