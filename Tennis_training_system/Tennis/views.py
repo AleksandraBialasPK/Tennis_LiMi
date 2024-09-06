@@ -30,7 +30,6 @@ class RegisterView(FormView):
     """
     View to handle the user registration process.
     """
-
     template_name = 'Tennis/register.html'
     form_class = CustomUserCreationForm
     success_url = reverse_lazy('login')
@@ -52,7 +51,6 @@ class CustomLoginView(FormView):
     """
     View to handle the user login process.
     """
-
     form_class = EmailAuthenticationForm
     template_name = 'Tennis/login.html'
     success_url = reverse_lazy('day')
@@ -66,7 +64,6 @@ class CustomLoginView(FormView):
         :param request: The HTTP request object.
         :return: A redirect if the user is authenticated, otherwise dispatch the view as normal.
         """
-
         if request.user.is_authenticated:
             return redirect(self.success_url)
         return super().dispatch(request, *args, **kwargs)
@@ -79,7 +76,6 @@ class CustomLoginView(FormView):
         :param form: The valid login form containing the user's email and password.
         :return: Redirects the authenticated user to the success URL, or reloads the form on failure.
         """
-
         email = form.cleaned_data.get('username')
         password = form.cleaned_data.get('password')
         user = authenticate(username=email, password=password)
@@ -99,7 +95,6 @@ class CustomLoginView(FormView):
         :param form: The invalid form containing errors.
         :return: Reloads the login form with error messages.
         """
-
         messages.error(self.request, 'Invalid email or password.')
         return super().form_invalid(form)
 
@@ -109,7 +104,6 @@ class CustomLogoutView(LogoutView):
     View to handle the user logout process.
     This view logs the user out and displays a success message upon logout.
     """
-
     next_page = reverse_lazy('login')
 
     def dispatch(self, request, *args, **kwargs):
@@ -119,7 +113,6 @@ class CustomLogoutView(LogoutView):
         :param request: The HTTP request object.
         :return: Redirects to the next page (login page) after logging out.
         """
-
         messages.success(request, "You have successfully logged out.")
         return super().dispatch(request, *args, **kwargs)
 
@@ -130,7 +123,6 @@ class DayView(LoginRequiredMixin, TemplateView):
     the display of games, their creation, update, and deletion, as well as
     the addition of courts and categories.
     """
-
     model = Game
     template_name = 'Tennis/day.html'
 
@@ -155,7 +147,6 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         :return: A dictionary containing base context data.
         """
-
         return {
             'hours': range(1, 24),
             'breaklines': range(23),
@@ -169,7 +160,6 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         :return: A dictionary containing context data specific to staff users.
         """
-
         return {
             'court_form': CourtForm(),
             'category_form': CategoryForm(),
@@ -186,7 +176,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param kwargs: Additional keyword arguments.
         :return: A JSON response for AJAX requests or a rendered template response.
         """
-
         if self.is_ajax(request):
             if 'fetch_game_details' in request.GET and 'game_id' in request.GET:
                 game_id = request.GET.get('game_id')
@@ -221,7 +210,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param request: The HTTP request object.
         :return: True if the request is an AJAX request, False otherwise.
         """
-
         return request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'XMLHttpRequest' in request.headers.get(
             'X-Requested-With', '')
 
@@ -232,7 +220,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param date: The date for which to retrieve events.
         :return: A tuple containing a list of events and a dictionary with date information.
         """
-
         user = self.request.user
 
         events_query = Game.objects.filter(
@@ -288,7 +275,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param time_str: A string representing time in 'HH:MM:SS' format.
         :return: The total number of minutes as an integer.
         """
-
         hours, minutes, _ = map(int, time_str.split(':'))
         return hours * 60 + minutes
 
@@ -303,7 +289,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param kwargs: Additional keyword arguments.
         :return: A JSON response indicating success or failure of the request.
         """
-
         if self.is_ajax(request):
             if 'update_game' in request.POST and request.POST.get('game_id'):
                 return self.handle_game_update(request)
@@ -328,7 +313,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param request: The HTTP request object.
         :return: A JSON response indicating success or failure of the game creation.
         """
-
         return self._handle_game_form_logic(request, is_update=False)
 
     @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True))
@@ -340,7 +324,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param request: The HTTP request object.
         :return: A JSON response indicating success or failure of the game update.
         """
-
         game_id = request.POST.get('game_id')
         if not game_id:
             return JsonResponse({'success': False, 'message': 'Game ID is required.'}, status=400)
@@ -363,7 +346,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param game_instance: The game instance to update, if applicable.
         :return: A JSON response indicating success or failure of the operation.
         """
-
         game_form = GameForm(request.POST, instance=game_instance) if is_update else GameForm(request.POST)
 
         if not game_form.is_valid():
@@ -373,55 +355,38 @@ class DayView(LoginRequiredMixin, TemplateView):
         new_game_end = game_form.cleaned_data['end_date_and_time']
         new_game_court = game_form.cleaned_data['court']
 
-        user_games = Game.objects.filter(
-            creator=request.user,
-            start_date_and_time__date=new_game_start.date()
-        ).order_by('start_date_and_time')
-
-        preceding_event = get_previous_event(user_games, new_game_start)
-        following_event = get_following_event(user_games, new_game_end)
-
-        if preceding_event:
-            travel_time, time_available, alert = check_if_enough_time(
-                preceding_event.end_date_and_time,
-                new_game_start,
-                preceding_event.court,
-                new_game_court,
-                request
-            )
-            if alert and request.POST.get('confirm') != 'true':
-                return JsonResponse({
-                    'success': False,
-                    'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                               f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
-                               f"Would you like to proceed anyway?",
-                    'confirm_needed': True
-                })
-
-        if following_event:
-            travel_time, time_available, alert = check_if_enough_time(
-                new_game_end,
-                following_event.start_date_and_time,
-                new_game_court,
-                following_event.court,
-                request
-            )
-            if alert and request.POST.get('confirm') != 'true':
-                return JsonResponse({
-                    'success': False,
-                    'message': f"Commute time between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                               f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
-                               f"Would you like to proceed anyway?",
-                    'confirm_needed': True
-                })
-
-        game_instance = game_form.save(commit=False)
-        if not is_update:
-            game_instance.creator = self.request.user
-        game_instance.save()
-
         participants = game_form.cleaned_data.get('participants', [])
 
+        game_instance = self._save_game_instance(game_form, game_instance, request, is_update)
+
+        game_form.save_m2m()
+
+        self._handle_participants(request, participants, new_game_start, new_game_end, new_game_court, game_instance,
+                                  is_update)
+
+        recurrence_type = game_form.cleaned_data.get('recurrence_type')
+        end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
+
+        if recurrence_type and end_date_of_recurrence:
+            self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
+
+        return JsonResponse({'success': True, 'message': 'Game added successfully'})
+
+    def _save_game_instance(self, game_form, game_instance, request, is_update):
+        """
+        Save the game instance and assign the creator if it's a new game.
+        """
+        game_instance = game_form.save(commit=False)
+        if not is_update:
+            game_instance.creator = request.user
+        game_instance.save()
+        return game_instance
+
+    def _handle_participants(self, request, participants, new_game_start, new_game_end, new_game_court, game_instance,
+                             is_update):
+        """
+        Handle participant conflicts and save their data.
+        """
         if is_update:
             game_instance.participant_set.all().delete()
 
@@ -435,51 +400,42 @@ class DayView(LoginRequiredMixin, TemplateView):
 
             participant_preceding_event = get_previous_event(participant_games, new_game_start)
             if participant_preceding_event:
-                travel_time, time_available, alert = check_if_enough_time(
-                    participant_preceding_event.end_date_and_time, new_game_start,
-                    participant_preceding_event.court, new_game_court, request
+                self._check_participant_conflict(
+                    request, participant_instance, participant_preceding_event, new_game_start, new_game_court,
+                    "preceding"
                 )
-                if alert and request.POST.get('confirm') != 'true':
-                    return JsonResponse({
-                        'success': False,
-                        'message': f"Commute time for participant {user.username} between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                   f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
-                                   f"Would you like to proceed anyway?",
-                        'confirm_needed': True
-                    })
-                participant_instance.alert = alert
-                participant_instance.travel_time = travel_time
-                participant_instance.time_available = time_available
-                participant_instance.save()
 
             participant_following_event = get_following_event(participant_games, new_game_end)
             if participant_following_event:
-                travel_time, time_available, alert = check_if_enough_time(
-                    new_game_end, participant_following_event.start_date_and_time,
-                    new_game_court, participant_following_event.court, request
+                self._check_participant_conflict(
+                    request, participant_instance, new_game_end, participant_following_event.start_date_and_time,
+                    new_game_court, "following"
                 )
-                if alert and request.POST.get('confirm') != 'true':
-                    return JsonResponse({
-                        'success': False,
-                        'message': f"Commute time for participant {user.username} between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
-                                   f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
-                                   f"Would you like to proceed anyway?",
-                        'confirm_needed': True
-                    })
-                participant_instance.alert = alert
-                participant_instance.travel_time = travel_time
-                participant_instance.time_available = time_available
-                participant_instance.save()
 
-        game_form.save_m2m()
+    def _check_participant_conflict(self, request, participant_instance, preceding_event_or_end, new_game_start_or_end,
+                                    new_game_court, event_type):
+        """
+        Helper function to handle participant conflict checks.
+        """
+        travel_time, time_available, alert = check_if_enough_time(
+            preceding_event_or_end.end_date_and_time if event_type == "preceding" else new_game_start_or_end,
+            new_game_start_or_end if event_type == "preceding" else preceding_event_or_end.start_date_and_time,
+            preceding_event_or_end.court, new_game_court, request
+        )
 
-        recurrence_type = game_form.cleaned_data.get('recurrence_type')
-        end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
+        if alert and request.POST.get('confirm') != 'true':
+            return JsonResponse({
+                'success': False,
+                'message': f"Commute time for participant {participant_instance.user.username} between the courts would take approximately {math.ceil(travel_time)} minutes.\n"
+                           f"The time gap between the events would be {math.ceil(time_available)} minutes.\n"
+                           f"Would you like to proceed anyway?",
+                'confirm_needed': True
+            })
 
-        if recurrence_type and end_date_of_recurrence:
-            self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
-
-        return JsonResponse({'success': True, 'message': 'Game added successfully'})
+        participant_instance.alert = alert
+        participant_instance.travel_time = travel_time
+        participant_instance.time_available = time_available
+        participant_instance.save()
 
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
@@ -490,7 +446,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param recurrence_type: The type of recurrence (e.g., daily, weekly).
         :param end_date_of_recurrence: The end date for the recurrence.
         """
-
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
 
@@ -529,7 +484,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param request: The HTTP request object.
         :return: A JSON response indicating success or failure of the game deletion.
         """
-
         game_id = request.POST.get('game_id')
         game = get_object_or_404(Game, game_id=game_id, creator=request.user)
 
@@ -547,7 +501,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param request: The HTTP request object.
         :return: A JSON response indicating success or failure of the category creation.
         """
-
         category_form = CategoryForm(request.POST)
         if category_form.is_valid():
             category_form.save()
@@ -561,7 +514,6 @@ class UsersProfile(LoginRequiredMixin, View):
     View for displaying and managing the user's profile. This view handles both
     updating the profile picture and changing the user's password.
     """
-
     template_name = 'Tennis/users_profile.html'
 
     def get(self, request):
@@ -573,7 +525,6 @@ class UsersProfile(LoginRequiredMixin, View):
         :param request: The HTTP request object.
         :return: A rendered template response containing the profile and password forms.
         """
-
         profile_form = ProfilePictureUpdateForm()
         password_form = CustomPasswordChangeForm(user=request.user)
 
@@ -591,7 +542,6 @@ class UsersProfile(LoginRequiredMixin, View):
         :param profile_picture: The uploaded profile picture file.
         :return: The file path where the profile picture is saved.
         """
-
         file_name = profile_picture.name
         file_path = os.path.join('profile_pictures', file_name)
         full_path = os.path.join(settings.MEDIA_ROOT, file_path)
@@ -613,7 +563,6 @@ class UsersProfile(LoginRequiredMixin, View):
         :param request: The HTTP request object.
         :return: A rendered template response with updated forms and success/error messages.
         """
-
         if 'profile_picture' in request.FILES:
             profile_form = ProfilePictureUpdateForm(request.POST, request.FILES)
             if profile_form.is_valid():
@@ -672,7 +621,6 @@ class CourtsView(LoginRequiredMixin, TemplateView):
         if not request.user.is_staff:
             return JsonResponse({'error': 'You do not have permission to perform this action'}, status=403)
 
-        # Check if the request is an AJAX request to fetch court data
         if self.is_ajax(request) and 'fetch_court_data' in request.POST:
             court_id = request.POST.get('court_id')
             court = get_object_or_404(Court, court_id=court_id)
@@ -686,11 +634,10 @@ class CourtsView(LoginRequiredMixin, TemplateView):
                 'latitude': court.latitude,
                 'longitude': court.longitude,
             }
-            return JsonResponse(data)  # Return court data as JSON
+            return JsonResponse(data)
 
-        # Handle court creation or update
         court_id = request.POST.get('court_id')
-        if 'delete_court' in request.POST:  # Handle court deletion
+        if 'delete_court' in request.POST:
             return self.handle_court_delete(request)
 
         if court_id:
@@ -730,6 +677,5 @@ class CourtsView(LoginRequiredMixin, TemplateView):
         :param request: The HTTP request object.
         :return: True if the request is an AJAX request, False otherwise.
         """
-
         return request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'XMLHttpRequest' in request.headers.get(
             'X-Requested-With', '')
