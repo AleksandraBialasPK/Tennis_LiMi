@@ -262,6 +262,7 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         date_info = {
             'current_date': date.strftime('%d %B %Y'),
+            'current_day_of_week': date.strftime('%A'),
             'prev_date': (date - timedelta(days=1)).strftime('%Y-%m-%d'),
             'next_date': (date + timedelta(days=1)).strftime('%Y-%m-%d'),
         }
@@ -354,15 +355,14 @@ class DayView(LoginRequiredMixin, TemplateView):
         new_game_start = game_form.cleaned_data['start_date_and_time']
         new_game_end = game_form.cleaned_data['end_date_and_time']
         new_game_court = game_form.cleaned_data['court']
-
         participants = game_form.cleaned_data.get('participants', [])
 
         game_instance = self._save_game_instance(game_form, game_instance, request, is_update)
 
-        game_form.save_m2m()
-
         self._handle_participants(request, participants, new_game_start, new_game_end, new_game_court, game_instance,
                                   is_update)
+
+        game_form.save_m2m()
 
         recurrence_type = game_form.cleaned_data.get('recurrence_type')
         end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
@@ -418,19 +418,15 @@ class DayView(LoginRequiredMixin, TemplateView):
         Helper function to handle participant conflict checks.
         """
         if event_type == "preceding":
-            event_end_time = preceding_event_or_end.end_date_and_time if hasattr(preceding_event_or_end,
-                                                                                 'end_date_and_time') else preceding_event_or_end
-            event_court = preceding_event_or_end.court if hasattr(preceding_event_or_end, 'court') else None
+            event_end_time = getattr(preceding_event_or_end, 'end_date_and_time', preceding_event_or_end)
+            event_court = getattr(preceding_event_or_end, 'court', None)
             event_start_time = new_game_start_or_end
         else:
             event_end_time = new_game_start_or_end
-            event_start_time = preceding_event_or_end.start_date_and_time if hasattr(preceding_event_or_end,
-                                                                                     'start_date_and_time') else preceding_event_or_end
-            event_court = preceding_event_or_end.court if hasattr(preceding_event_or_end, 'court') else None
+            event_start_time = getattr(preceding_event_or_end, 'start_date_and_time', preceding_event_or_end)
+            event_court = getattr(preceding_event_or_end, 'court', None)
 
-        # Ensure we have courts to compare travel times
         if not event_court:
-            print("Error: Missing court for the event.")
             return
 
         travel_time, time_available, alert = check_if_enough_time(
