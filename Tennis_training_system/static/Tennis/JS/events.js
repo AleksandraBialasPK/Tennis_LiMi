@@ -491,7 +491,6 @@ function handleFormSubmission(form, successMessage, buttonName) {
         } else {
             formData.append(buttonName, 'true');
         }
-
         fetch(window.location.href, {
             method: 'POST',
             headers: {
@@ -501,70 +500,47 @@ function handleFormSubmission(form, successMessage, buttonName) {
             body: formData,
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert(successMessage);
-                resetForm(form)
-                loadEvents(selectedDate);
-            } else if (data.confirm_needed) {
-                console.log("Confirmation Needed:", data.message);
-                modalMessage.textContent = data.message;
-                modal.style.display = 'block';
+            if (response.status === 409) {  // Conflict detected
+                return response.json().then(data => {
+                    if (data.confirm_needed) {
+                        // Show modal with conflict message
+                        modalMessage.textContent = data.message;
+                        modal.style.display = 'block';
 
-                // Yes button: User wants to add the game anyway
-                confirmYes.onclick = function() {
-                    modal.style.display = 'none';
-                    formData.append('confirm', 'true');
+                        confirmYes.onclick = function() {
+                            modal.style.display = 'none';
+                            formData.append('confirm', 'true');  // Add the confirm flag
 
-                    // Re-send the form with the confirmation flag
-                    fetch(window.location.href, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData,
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            alert(successMessage);
-                            resetForm(form)
-                            loadEvents(selectedDate);
-                        } else {
-                            alert('Failed to add game: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Failed: An unexpected error occurred.');
-                    });
-                };
+                            // Re-send the form with confirmation
+                            fetch(window.location.href, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: formData,
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert('Game added successfully');
+                                    resetForm(form);
+                                    loadEvents(selectedDate);
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
+                        };
 
-                // No button: User cancels the action
-                confirmNo.onclick = function() {
-                    modal.style.display = 'none';
-                };
-            } else {
-                if (data.errors) {
-                    let errorMessages = '';
-                    for (let field in data.errors) {
-                        errorMessages += `${field}: ${data.errors[field].join(', ')}\n`;
+                        confirmNo.onclick = function() {
+                            modal.style.display = 'none';
+                            // Do nothing to prevent the game from being added
+                        };
                     }
-                    alert('Failed: ' + errorMessages);
-                } else {
-                    alert('Failed: An unexpected error occurred.');
-                }
+                });
+            } else if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            } else {
+                return response.json();
             }
         })
         .catch(error => {

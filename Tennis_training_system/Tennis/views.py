@@ -373,7 +373,7 @@ class DayView(LoginRequiredMixin, TemplateView):
                                f"{conflict['participant']} has a time conflict (Travel: {math.ceil(conflict['travel_time'])} mins, Gap: {math.ceil(conflict['time_available'])} mins)"
                                for conflict in conflicts]),
                 'confirm_needed': True
-            })
+            }, status=409)
 
         recurrence_type = game_form.cleaned_data.get('recurrence_type')
         end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')

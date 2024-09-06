@@ -157,7 +157,7 @@ body {
 
 .new-event-form {
     position: fixed;
-    top: 18%;
+    top: 20%;
     left: 43%;
     min-width: 600px;
     width: 600px;
@@ -714,8 +714,22 @@ header > nav {
     z-index: 3;
 }
 
+#confirmationModal {
+    position: fixed;
+    top:25%;
+    left: 43%;
+    transform: translate(-50%,-65%);
+    z-index:5;
+    min-width:2500px;
+}
+
 .modal-content {
     position: relative;
+    padding: 20px;
+}
+
+.modal-content-alert {
+    border: 2px solid crimson;
     padding: 20px;
 }
 
