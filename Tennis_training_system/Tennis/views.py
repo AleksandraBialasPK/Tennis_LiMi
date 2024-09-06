@@ -339,7 +339,7 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         return self._handle_game_form_logic(request, is_update=True, game_instance=game)
 
-    def _handle_game_form_logic(self, request, is_update=False, game_instance=None, update_recurrence=False):
+    def _handle_game_form_logic(self, request, is_update=False, game_instance=None):
         """
         Core logic for handling both creation and update of a game.
         This method processes the game form, checks for scheduling conflicts
@@ -381,8 +381,13 @@ class DayView(LoginRequiredMixin, TemplateView):
         recurrence_type = game_form.cleaned_data.get('recurrence_type')
         end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
 
-        if recurrence_type and end_date_of_recurrence:
-            self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
+        if is_update and game_instance.group:
+            # If it's an update and the game belongs to a recurrence group, update the group
+            self._handle_recurrence_update(game_instance, participants)
+        else:
+            # Otherwise, handle new recurrence creation
+            if recurrence_type and end_date_of_recurrence:
+                self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
 
         return JsonResponse({'success': True, 'message': 'Game added successfully'})
 
@@ -475,6 +480,44 @@ class DayView(LoginRequiredMixin, TemplateView):
             }
         return None
 
+    def _handle_recurrence_update(self, game, participants):
+        print("handling reccurence update!!!!!!")
+        current_start = game.start_date_and_time
+        current_end = game.end_date_and_time
+        print(f"Current start: {current_start}, Current end: {current_end}")
+        print(f"Game group: {game.group}")
+
+        if game.group:
+            games_in_group = Game.objects.filter(group_id=game.group.group_id).order_by('start_date_and_time')
+
+            for idx, game_instance in enumerate(games_in_group):
+                if idx > 0:
+                    delta = self._get_delta_by_recurrence_type(game.group.recurrence_type, idx)
+                    game_instance.start_date_and_time = current_start + delta
+                    game_instance.end_date_and_time = current_end + delta
+
+                game_instance.court = game.court
+                game_instance.name = game.name
+                game_instance.save()
+
+                game_instance.participant_set.all().delete()
+                for user in participants:
+                    Participant.objects.create(user=user, game=game_instance)
+
+    def _get_delta_by_recurrence_type(self, recurrence_type, idx):
+        """
+        Return the appropriate time delta based on recurrence type and index.
+        """
+        if recurrence_type == 'daily':
+            return timedelta(days=idx)
+        elif recurrence_type == 'weekly':
+            return timedelta(weeks=idx)
+        elif recurrence_type == 'biweekly':
+            return timedelta(weeks=2 * idx)
+        elif recurrence_type == 'monthly':
+            return relativedelta(months=idx)
+        return timedelta(0)
+
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
         Handles the creation of recurring game events based on recurrence type and end date.
@@ -484,32 +527,15 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param recurrence_type: The type of recurrence (e.g., daily, weekly).
         :param end_date_of_recurrence: The end date for the recurrence.
         """
+        print("handling reccurence creation")
         end_date_of_recurrence = make_aware(datetime.combine(end_date_of_recurrence, time(23, 59)))
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
 
-        future_events = Game.objects.filter(
-            group=game.group,
-            start_date_and_time__gt=current_start
-        ).exclude(game_id=game.game_id).first()
-
         while current_start <= end_date_of_recurrence:
-            if future_events is not None:
-                print(f"Updating existing game with ID")
-                future_event = future_events.first()
-                future_event.start_date_and_time = current_start
-                future_event.end_date_and_time = current_end
-                future_event.court = game.court
-                future_event.save()
-
-                future_event.participant_set.all().delete()
-                for user in participants:
-                    Participant.objects.create(user=user, game=future_event)
-
-                future_events = future_events.exclude(game_id=future_event.game_id)
-
-            else:
-                print("Creating a new game")
+            print("I have entered while current_start <= end_date_of_recurrence:")
+            if current_start != game.start_date_and_time:
+                print("I am creating one game after another!")
                 new_game = Game.objects.create(
                     name=game.name,
                     category=game.category,

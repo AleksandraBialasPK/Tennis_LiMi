@@ -291,7 +291,16 @@ function openEditForm(gameId) {
             form.querySelector('[name="end_date_and_time"]').value = data.end_date_and_time;
             form.querySelector('[name="category"]').value = data.category;
             form.querySelector('[name="court"]').value = data.court;
+            if (data.recurrence_type && data.end_date_of_recurrence) {
+                // Set recurrence type
+                form.querySelector('[name="recurrence_type"]').value = data.recurrence_type;
 
+                // Set end date of recurrence
+                form.querySelector('[name="end_date_of_recurrence"]').value = data.end_date_of_recurrence;
+
+                // Show the recurrence end date section if it's hidden
+                document.getElementById('recurrence-end-date').style.display = 'block';
+            }
             if (data.group) {
                 console.log("Appending update options"); // Check if this line is reached
                 const updateHtml = `
