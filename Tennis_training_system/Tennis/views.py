@@ -3,7 +3,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.utils.timezone import now
+from django.utils.timezone import now, make_aware, is_naive
 from Tennis_training_system import settings
 from django.db.models import F
 from django.conf import settings
@@ -19,7 +19,7 @@ from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, 
 from django.views.generic import FormView, TemplateView, View
 from .models import Game, Category, Participant, Court
 from django.contrib.auth.mixins import LoginRequiredMixin
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone, time
 from django.http import JsonResponse, Http404
 import logging
 
@@ -191,6 +191,8 @@ class DayView(LoginRequiredMixin, TemplateView):
                     'participants': list(game.participant_set.values_list('user__email', 'user__username')),
                     'is_creator': (game.creator == request.user),
                     'group': game.group.group_id if game.group else None,
+                    'recurrence_type': game.group.recurrence_type if game.group else None,
+                    'end_date_of_recurrence': game.group.end_date if game.group else None,
                 }
                 return JsonResponse(game_data)
 
@@ -335,23 +337,9 @@ class DayView(LoginRequiredMixin, TemplateView):
         except Http404:
             return JsonResponse({'success': False, 'message': 'Game not found or permission denied.'}, status=404)
 
-        if game.group:
-            update_all = request.POST.get('update_all') == 'true'
+        return self._handle_game_form_logic(request, is_update=True, game_instance=game)
 
-            if update_all:
-                # Fetch all games in the recurrence group
-                games_in_group = Game.objects.filter(group=game.group)
-                for group_game in games_in_group:
-                    self._handle_game_form_logic(request, is_update=True, game_instance=group_game)
-                return JsonResponse(
-                    {'success': True, 'message': 'All events in the recurrence group updated successfully'})
-            else:
-                return self._handle_game_form_logic(request, is_update=True, game_instance=game)
-        else:
-            # Handle normal game update if there's no recurrence group
-            return self._handle_game_form_logic(request, is_update=True, game_instance=game)
-
-    def _handle_game_form_logic(self, request, is_update=False, game_instance=None):
+    def _handle_game_form_logic(self, request, is_update=False, game_instance=None, update_recurrence=False):
         """
         Core logic for handling both creation and update of a game.
         This method processes the game form, checks for scheduling conflicts
@@ -496,11 +484,32 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param recurrence_type: The type of recurrence (e.g., daily, weekly).
         :param end_date_of_recurrence: The end date for the recurrence.
         """
+        end_date_of_recurrence = make_aware(datetime.combine(end_date_of_recurrence, time(23, 59)))
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
 
-        while current_start.date() <= end_date_of_recurrence:
-            if current_start != game.start_date_and_time:
+        future_events = Game.objects.filter(
+            group=game.group,
+            start_date_and_time__gt=current_start
+        ).exclude(game_id=game.game_id).first()
+
+        while current_start <= end_date_of_recurrence:
+            if future_events is not None:
+                print(f"Updating existing game with ID")
+                future_event = future_events.first()
+                future_event.start_date_and_time = current_start
+                future_event.end_date_and_time = current_end
+                future_event.court = game.court
+                future_event.save()
+
+                future_event.participant_set.all().delete()
+                for user in participants:
+                    Participant.objects.create(user=user, game=future_event)
+
+                future_events = future_events.exclude(game_id=future_event.game_id)
+
+            else:
+                print("Creating a new game")
                 new_game = Game.objects.create(
                     name=game.name,
                     category=game.category,
@@ -538,6 +547,11 @@ class DayView(LoginRequiredMixin, TemplateView):
         game = get_object_or_404(Game, game_id=game_id, creator=request.user)
 
         if game.creator == request.user:
+            if game.group:
+                Game.objects.filter(group=game.group, start_date_and_time__gte=game.start_date_and_time).delete()
+                return JsonResponse({'success': True, 'message': 'Games deleted successfully'})
+            else:
+                game.delete()
             game.delete()
             return JsonResponse({'success': True, 'message': 'Game deleted successfully'})
         else:
