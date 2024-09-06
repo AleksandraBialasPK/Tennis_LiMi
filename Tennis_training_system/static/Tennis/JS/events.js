@@ -1,7 +1,6 @@
 const createNewEvent = document.getElementById("create-new-game-button"),
     addNewCategory = document.getElementById("create-new-category-button"),
     game_form = document.getElementById('game_form'),
-    court_form = document.getElementById('court_form'),
     category_form = document.getElementById('category_form'),
     outsideOfForm = document.querySelector("main"),
     overlay = document.getElementById('overlay');
@@ -513,7 +512,7 @@ function handleFormSubmission(form, successMessage, buttonName) {
                 resetForm(form)
                 loadEvents(selectedDate);
             } else if (data.confirm_needed) {
-                // Show custom modal with the warning message
+                console.log("Confirmation Needed:", data.message);
                 modalMessage.textContent = data.message;
                 modal.style.display = 'block';
 
@@ -576,7 +575,6 @@ function handleFormSubmission(form, successMessage, buttonName) {
 }
 
 handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
-handleFormSubmission(document.getElementById('court_form'), 'Court added successfully!', 'submit_court');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
 
 (function($) {

@@ -361,8 +361,19 @@ class DayView(LoginRequiredMixin, TemplateView):
 
         game_form.save_m2m()
 
-        self._handle_participants(request, participants, new_game_start, new_game_end, new_game_court, game_instance,
+        conflicts = self._handle_participants(request, participants, new_game_start, new_game_end, new_game_court, game_instance,
                                   is_update)
+
+        if len(conflicts) > 0 and request.POST.get('confirm') != 'true':
+            logger.info(f'Sending conflicts response: {conflicts}')
+            return JsonResponse({
+                'success': False,
+                'message': f"There are conflicts for the following participants:\n" +
+                           "\n".join([
+                               f"{conflict['participant']} has a time conflict (Travel: {math.ceil(conflict['travel_time'])} mins, Gap: {math.ceil(conflict['time_available'])} mins)"
+                               for conflict in conflicts]),
+                'confirm_needed': True
+            })
 
         recurrence_type = game_form.cleaned_data.get('recurrence_type')
         end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
@@ -418,15 +429,10 @@ class DayView(LoginRequiredMixin, TemplateView):
                 if conflict:
                     conflicts.append(conflict)
 
-        if conflicts and request.POST.get('confirm') != 'true':
-            return JsonResponse({
-                'success': False,
-                'message': f"There are conflicts for the following participants:\n" +
-                           "\n".join([
-                                         f"{conflict['participant']} has a time conflict (Travel: {math.ceil(conflict['travel_time'])} mins, Gap: {math.ceil(conflict['time_available'])} mins)"
-                                         for conflict in conflicts]),
-                'confirm_needed': True
-            })
+        for conflict in conflicts:
+            print(f'conflict: {conflict}\n')
+
+        return conflicts
 
     def _check_participant_conflict(self, request, participant_instance, preceding_event_or_end, new_game_start_or_end,
                                     new_game_court, event_type):
