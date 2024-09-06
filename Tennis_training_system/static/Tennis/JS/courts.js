@@ -2,7 +2,10 @@ document.addEventListener("DOMContentLoaded", function() {
     const addNewCourt = document.getElementById("add-new-court-button"),
         court_form = document.getElementById('court_form'),
         closeCourtFormButton = document.getElementById("closeCourtFormButton"),
-        overlay = document.getElementById('overlay');
+        overlay = document.getElementById('overlay'),
+        editButtons = document.querySelectorAll('.edit-button'),
+        updateCourtButton = document.querySelector('button[name="update_court"]'),
+        addCourtButton = document.querySelector('button[name="submit_court"]');
 
     // Function to hide the form and overlay
     function hideForm(form) {
@@ -97,6 +100,57 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
         });
     }
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const courtId = this.closest('.court-item').querySelector('.delete-button').dataset.courtId;
+
+            // Use fetch to get court data and populate form for editing via POST request
+            const formData = new FormData();
+            formData.append('fetch_court_data', 'true');
+            formData.append('court_id', courtId);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Populate the form with court details for editing
+                court_form.querySelector('input[name="court_id"]').value = courtId;
+                court_form.querySelector('input[name="name"]').value = data.name;
+                court_form.querySelector('input[name="building_number"]').value = data.building_number;
+                court_form.querySelector('input[name="street"]').value = data.street;
+                court_form.querySelector('input[name="city"]').value = data.city;
+                court_form.querySelector('input[name="postal_code"]').value = data.postal_code;
+                court_form.querySelector('input[name="country"]').value = data.country;
+
+                // Switch form buttons to show "Update" instead of "Add"
+                updateCourtButton.style.display = 'inline';
+                addCourtButton.style.display = 'none';
+
+                court_form.style.display = 'block';
+                overlay.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error fetching court data:', error);
+                alert('Failed to load court data for editing.');
+            });
+        });
+    });
+
+    closeCourtFormButton.addEventListener('click', function() {
+        court_form.reset();
+        court_form.querySelector('input[name="court_id"]').value = '';  // Reset court_id for new court creation
+        updateCourtButton.style.display = 'none';
+        addCourtButton.style.display = 'inline';
+        court_form.style.display = 'none';
+        overlay.style.display = 'none';
+    });
 
     // Apply form submission logic for court creation or update
     if (court_form) {

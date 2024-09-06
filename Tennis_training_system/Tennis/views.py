@@ -762,27 +762,68 @@ class CourtsView(LoginRequiredMixin, TemplateView):
             context['court_form'] = CourtForm()
         return context
 
+    # def get_court_data(self, request, court_id=None, *args, **kwargs):
+    #     """
+    #     Handle POST request to fetch court data for editing.
+    #     """
+    #     if not court_id:
+    #         court_id = request.POST.get('court_id')  # Get the court_id from POST data
+    #
+    #     court = get_object_or_404(Court, court_id=court_id)
+    #
+    #     if request.user.is_staff:
+    #         data = {
+    #             'name': court.name,
+    #             'building_number': court.building_number,
+    #             'street': court.street,
+    #             'city': court.city,
+    #             'postal_code': court.postal_code,
+    #             'country': court.country,
+    #             'latitude': court.latitude,
+    #             'longitude': court.longitude,
+    #         }
+    #         return JsonResponse(data)
+    #     return JsonResponse({'error': 'Unauthorized'}, status=403)
+
     def post(self, request, *args, **kwargs):
         """
-        Handle form submissions for adding or updating a court.
+        Handle form submissions for adding or updating a court,
+        and handle AJAX requests to fetch court data.
         """
         if not request.user.is_staff:
             return JsonResponse({'error': 'You do not have permission to perform this action'}, status=403)
 
+        # Check if the request is an AJAX request to fetch court data
+        if self.is_ajax(request) and 'fetch_court_data' in request.POST:
+            court_id = request.POST.get('court_id')
+            court = get_object_or_404(Court, court_id=court_id)
+            data = {
+                'name': court.name,
+                'building_number': court.building_number,
+                'street': court.street,
+                'city': court.city,
+                'postal_code': court.postal_code,
+                'country': court.country,
+                'latitude': court.latitude,
+                'longitude': court.longitude,
+            }
+            return JsonResponse(data)  # Return court data as JSON
+
+        # Handle court creation or update
+        court_id = request.POST.get('court_id')
         if 'delete_court' in request.POST:  # Handle court deletion
             return self.handle_court_delete(request)
-        else:  # Handle court creation or update
-            court_id = request.POST.get('court_id')
-            if court_id:
-                court = get_object_or_404(Court, id=court_id)
-                court_form = CourtForm(request.POST, instance=court)
-            else:
-                court_form = CourtForm(request.POST)
 
-            if court_form.is_valid():
-                court_form.save()
-                return JsonResponse({'success': True, 'message': 'Court added/updated successfully'})
-            return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
+        if court_id:
+            court = get_object_or_404(Court, court_id=court_id)
+            court_form = CourtForm(request.POST, instance=court)
+        else:
+            court_form = CourtForm(request.POST)
+
+        if court_form.is_valid():
+            court_form.save()
+            return JsonResponse({'success': True, 'message': 'Court added/updated successfully'})
+        return JsonResponse({'success': False, 'errors': court_form.errors.as_json()}, status=400)
 
     def handle_court_delete(self, request):
         """
@@ -802,3 +843,14 @@ class CourtsView(LoginRequiredMixin, TemplateView):
         else:
             return JsonResponse({'success': False, 'message': 'You do not have permission to delete this court'},
                                 status=403)
+
+    def is_ajax(self, request):
+        """
+        Determine if the current request is an AJAX request.
+
+        :param request: The HTTP request object.
+        :return: True if the request is an AJAX request, False otherwise.
+        """
+
+        return request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'XMLHttpRequest' in request.headers.get(
+            'X-Requested-With', '')

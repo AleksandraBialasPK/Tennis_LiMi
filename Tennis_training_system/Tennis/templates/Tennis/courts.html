@@ -66,6 +66,7 @@
                     <h2>Add a new court!</h2>
                     {% csrf_token %}
                     <div class="game-form-fields">
+                        <input type="hidden" name="court_id" value="">
                         {{ court_form.as_p }}
                     </div>
                     <button type="submit" class="create-new-event-button add-court-category-buttons" name="submit_court" value="true" style="display: inline">Add Court</button>
