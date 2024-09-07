@@ -65,6 +65,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function resetForm(form) {
     form.reset();
+    const gameIdField = form.querySelector('[name="game_id"]');
     if (gameIdField) {
         gameIdField.value = '';
     }
