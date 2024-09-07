@@ -407,23 +407,11 @@ class DayView(LoginRequiredMixin, TemplateView):
         conflicts = []
 
         if is_update:
-            existing_participants = set(game_instance.participant_set.all().values_list('user', flat=True))
-            new_participants = set([user.pk for user in participants])
-
-            participants_to_add = new_participants - existing_participants
-            for user_id in participants_to_add:
-                Participant.objects.create(user_id=user_id, game=game_instance)
-
-            participants_to_remove = existing_participants - new_participants
-            if participants_to_remove:
-                game_instance.participant_set.filter(user_id__in=participants_to_remove).delete()
-
-        else:
-            for user in participants:
-                Participant.objects.create(user=user, game=game_instance)
+            game_instance.participant_set.all().delete()
 
         for user in participants:
-            participant_instance = Participant.objects.get(user=user, game=game_instance)
+            participant_instance = Participant.objects.create(user=user, game=game_instance)
+
             participant_games = Game.objects.filter(
                 participant__user=user,
                 start_date_and_time__date=new_game_start.date()
@@ -446,6 +434,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                 )
                 if conflict:
                     conflicts.append(conflict)
+
+        for conflict in conflicts:
+            print(f'conflict: {conflict}\n')
 
         return conflicts
 
@@ -488,14 +479,23 @@ class DayView(LoginRequiredMixin, TemplateView):
         return None
 
     def _handle_recurrence_update(self, game, participants):
+        print("handling reccurence update!!!!!!")
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
+        print(f"Current start: {current_start}, Current end: {current_end}")
+        print(f"Game group: {game.group}")
+        idx = 1
 
         if game.group:
             games_in_group = Game.objects.filter(group_id=game.group.group_id).order_by('start_date_and_time')
 
             for idx, game_instance in enumerate(games_in_group):
-                if idx > 0:
+                if game_instance.game_id == game.game_id:
+                    # Update the first event directly (the one being edited)
+                    game_instance.start_date_and_time = current_start
+                    game_instance.end_date_and_time = current_end
+                else:
+                    # Handle the subsequent recurring events
                     delta = self._get_delta_by_recurrence_type(game.group.recurrence_type, idx)
                     game_instance.start_date_and_time = current_start + delta
                     game_instance.end_date_and_time = current_end + delta
@@ -504,15 +504,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                 game_instance.name = game.name
                 game_instance.save()
 
-                self._handle_participants(
-                    request=None,
-                    participants=participants,
-                    new_game_start=game_instance.start_date_and_time,
-                    new_game_end=game_instance.end_date_and_time,
-                    new_game_court=game_instance.court,
-                    game_instance=game_instance,
-                    is_update=True
-                )
+                game_instance.participant_set.all().delete()
+                for user in participants:
+                    Participant.objects.create(user=user, game=game_instance)
 
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
@@ -523,38 +517,39 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param recurrence_type: The type of recurrence (e.g., daily, weekly).
         :param end_date_of_recurrence: The end date for the recurrence.
         """
-        print("handling reccurence creation")
+        print("Handling recurrence creation")
         end_date_of_recurrence = make_aware(datetime.combine(end_date_of_recurrence, time(23, 59)))
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
         idx = 1
 
         while current_start <= end_date_of_recurrence:
-            print("I am creating one game after another!")
-            new_game = Game.objects.create(
-                name=game.name,
-                category=game.category,
-                court=game.court,
-                creator=game.creator,
-                start_date_and_time=current_start,
-                end_date_and_time=current_end,
-                group=game.group
-            )
+            # Skip creating the game for the original start date
+            if current_start != game.start_date_and_time:
+                print(f"Creating game for date: {current_start}")
+                new_game = Game.objects.create(
+                    name=game.name,
+                    category=game.category,
+                    court=game.court,
+                    creator=game.creator,
+                    start_date_and_time=current_start,
+                    end_date_and_time=current_end,
+                    group=game.group
+                )
+                for user in participants:
+                    Participant.objects.create(user=user, game=new_game)
+            else:
+                print(f"Skipping the original game date: {current_start}")
 
-            self._handle_participants(
-                request=None,
-                participants=participants,
-                new_game_start=new_game.start_date_and_time,
-                new_game_end=new_game.end_date_and_time,
-                new_game_court=new_game.court,
-                game_instance=new_game,
-                is_update=False
-            )
-
+            # Calculate the delta and update the start/end times for the next game
             delta = self._get_delta_by_recurrence_type(recurrence_type, idx)
+
+            print(f"Before applying delta: Start={current_start}, End={current_end}, Delta={delta}")
             current_start += delta
             current_end += delta
-            idx += 1
+            print(f"After applying delta: Start={current_start}, End={current_end}")
+
+            idx = 1
 
     def _get_delta_by_recurrence_type(self, recurrence_type, idx):
         """
