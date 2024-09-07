@@ -460,7 +460,8 @@ function closeFormWithoutReset(modalId) {
     const modal = document.getElementById(modalId);
 
     if (modal) {
-        setOverlayAndFormDisplayNone(modal)
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
     } else {
         console.error(`Modal with ID ${modal} not found`);
     }
@@ -476,8 +477,6 @@ function attachCloseEventWithoutReset(buttonId, modalId) {
         console.error(`Button with ID ${buttonId} not found`);
     }
 }
-
-attachCloseEventWithoutReset('closeGameDetailsButton', 'eventDetailsModal');
 
 function attachCloseEvent(buttonId, formId) {
     const button = document.getElementById(buttonId);
