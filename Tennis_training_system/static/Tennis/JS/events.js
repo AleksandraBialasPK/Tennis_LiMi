@@ -477,6 +477,8 @@ function attachCloseEventWithoutReset(buttonId, modalId) {
     }
 }
 
+attachCloseEventWithoutReset('closeGameDetailsButton', 'eventDetailsModal');
+
 function attachCloseEvent(buttonId, formId) {
     const button = document.getElementById(buttonId);
     if (button) {
