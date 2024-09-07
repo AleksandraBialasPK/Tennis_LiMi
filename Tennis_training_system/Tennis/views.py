@@ -381,11 +381,9 @@ class DayView(LoginRequiredMixin, TemplateView):
         recurrence_type = game_form.cleaned_data.get('recurrence_type')
         end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
 
-        if is_update and game_instance.group:
-            # If it's an update and the game belongs to a recurrence group, update the group
+        if is_update and recurrence_type is not None:
             self._handle_recurrence_update(game_instance, participants)
         else:
-            # Otherwise, handle new recurrence creation
             if recurrence_type and end_date_of_recurrence:
                 self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
 
@@ -567,9 +565,15 @@ class DayView(LoginRequiredMixin, TemplateView):
         if game.creator == request.user:
             if game.group:
                 Game.objects.filter(group=game.group, start_date_and_time__gte=game.start_date_and_time).delete()
+                remaining_games = Game.objects.filter(group=game.group)
+
+                if not remaining_games:
+                    game.group.delete()
+
                 return JsonResponse({'success': True, 'message': 'Games deleted successfully'})
             else:
                 game.delete()
+                game.group.delete()
             game.delete()
             return JsonResponse({'success': True, 'message': 'Game deleted successfully'})
         else:
