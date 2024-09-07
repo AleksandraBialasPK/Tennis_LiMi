@@ -360,10 +360,6 @@ class DayView(LoginRequiredMixin, TemplateView):
         new_game_court = game_form.cleaned_data['court']
         participants = game_form.cleaned_data.get('participants', [])
 
-        game_instance = self._save_game_instance(game_form, game_instance, request, is_update)
-
-        game_form.save_m2m()
-
         conflicts = self._handle_participants(request, participants, new_game_start, new_game_end, new_game_court, game_instance,
                                   is_update)
 
@@ -377,6 +373,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                                for conflict in conflicts]),
                 'confirm_needed': True
             }, status=409)
+
+        game_instance = self._save_game_instance(game_form, game_instance, request, is_update)
+        game_form.save_m2m()
 
         recurrence_type = game_form.cleaned_data.get('recurrence_type')
         end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
