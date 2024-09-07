@@ -407,11 +407,23 @@ class DayView(LoginRequiredMixin, TemplateView):
         conflicts = []
 
         if is_update:
-            game_instance.participant_set.all().delete()
+            existing_participants = set(game_instance.participant_set.all().values_list('user', flat=True))
+            new_participants = set([user.pk for user in participants])
+
+            participants_to_add = new_participants - existing_participants
+            for user_id in participants_to_add:
+                Participant.objects.create(user_id=user_id, game=game_instance)
+
+            participants_to_remove = existing_participants - new_participants
+            if participants_to_remove:
+                game_instance.participant_set.filter(user_id__in=participants_to_remove).delete()
+
+        else:
+            for user in participants:
+                Participant.objects.create(user=user, game=game_instance)
 
         for user in participants:
-            participant_instance = Participant.objects.create(user=user, game=game_instance)
-
+            participant_instance = Participant.objects.get(user=user, game=game_instance)
             participant_games = Game.objects.filter(
                 participant__user=user,
                 start_date_and_time__date=new_game_start.date()
@@ -434,9 +446,6 @@ class DayView(LoginRequiredMixin, TemplateView):
                 )
                 if conflict:
                     conflicts.append(conflict)
-
-        for conflict in conflicts:
-            print(f'conflict: {conflict}\n')
 
         return conflicts
 
@@ -479,11 +488,8 @@ class DayView(LoginRequiredMixin, TemplateView):
         return None
 
     def _handle_recurrence_update(self, game, participants):
-        print("handling reccurence update!!!!!!")
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
-        print(f"Current start: {current_start}, Current end: {current_end}")
-        print(f"Game group: {game.group}")
 
         if game.group:
             games_in_group = Game.objects.filter(group_id=game.group.group_id).order_by('start_date_and_time')
@@ -498,9 +504,15 @@ class DayView(LoginRequiredMixin, TemplateView):
                 game_instance.name = game.name
                 game_instance.save()
 
-                game_instance.participant_set.all().delete()
-                for user in participants:
-                    Participant.objects.create(user=user, game=game_instance)
+                self._handle_participants(
+                    request=None,
+                    participants=participants,
+                    new_game_start=game_instance.start_date_and_time,
+                    new_game_end=game_instance.end_date_and_time,
+                    new_game_court=game_instance.court,
+                    game_instance=game_instance,
+                    is_update=True
+                )
 
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
@@ -528,11 +540,18 @@ class DayView(LoginRequiredMixin, TemplateView):
                 end_date_and_time=current_end,
                 group=game.group
             )
-            for user in participants:
-                Participant.objects.create(user=user, game=new_game)
+
+            self._handle_participants(
+                request=None,
+                participants=participants,
+                new_game_start=new_game.start_date_and_time,
+                new_game_end=new_game.end_date_and_time,
+                new_game_court=new_game.court,
+                game_instance=new_game,
+                is_update=False
+            )
 
             delta = self._get_delta_by_recurrence_type(recurrence_type, idx)
-
             current_start += delta
             current_end += delta
             idx += 1
