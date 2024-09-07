@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     document.getElementById('back-to-today').addEventListener('click', function() {
-        selectedDate = new Date().toISOString().split('T')[0]; // Reset to today's date
+        selectedDate = new Date().toISOString().split('T')[0];
         loadEvents(selectedDate);
     });
 
@@ -65,13 +65,20 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function resetForm(form) {
     form.reset();
+    if (gameIdField) {
+        gameIdField.value = '';
+    }
     const select2Fields = form.querySelectorAll('.django-select2');
-    select2Fields.forEach(field => {
-        $(field).val(null).trigger('change');
-    });
+    if (select2Fields && select2Fields.length > 0) {
+        select2Fields.forEach(field => {
+            $(field).val(null).trigger('change');
+        });
+    }
 }
 
+
 function setOverlayAndFormDisplayNone(form) {
+    resetForm(form)
     form.style.display = 'none';
     overlay.style.display = 'none';
 }
@@ -80,7 +87,6 @@ function handleOutsideClick(form, button) {
     outsideOfForm.addEventListener('click', function hideForm(event) {
         if (!form.contains(event.target) && event.target !== button) {
             setOverlayAndFormDisplayNone(form)
-            resetForm(form);
             outsideOfForm.removeEventListener('click', hideForm);
         }
     });
@@ -414,7 +420,7 @@ function toggleForm(form, button, isEdit = false) {
                 handleOutsideClick(form, button)
 
             } else {
-                resetForm(form)
+                setOverlayAndFormDisplayNone(form)
             }
         });
     } else {
@@ -547,8 +553,8 @@ function handleFormSubmission(form, successMessage, buttonName) {
                             .then(data => {
                                 if (data.success) {
                                     alert('Game added successfully');
-                                    resetForm(form);
                                     loadEvents(selectedDate);
+                                    setOverlayAndFormDisplayNone(form)
                                 }
                             })
                             .catch(error => console.error('Error:', error));
@@ -563,7 +569,13 @@ function handleFormSubmission(form, successMessage, buttonName) {
             } else if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             } else {
-                return response.json();
+                return response.json().then(data => {
+                    if (data.success) {
+                        alert(successMessage);
+                        loadEvents(selectedDate);
+                        setOverlayAndFormDisplayNone(form);
+                    }
+                });
             }
         })
         .catch(error => {
@@ -576,13 +588,16 @@ function handleFormSubmission(form, successMessage, buttonName) {
 handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
 
+
+// jQuery for Django select2 and recurrence behavior
 (function($) {
     $(document).ready(function() {
         $('.django-select2').djangoSelect2();
 
         $('#id_recurrence_type').change(function() {
             const recurrenceType = $(this).val();
-            if (recurrenceType) {
+
+            if (recurrenceType && recurrenceType !== "None" && recurrenceType !== "") {
                 $('#recurrence-end-date').show();
             } else {
                 $('#recurrence-end-date').hide();
@@ -591,7 +606,7 @@ handleFormSubmission(document.getElementById('category_form'), 'Category added s
         });
 
         const initialRecurrenceType = $('#id_recurrence_type').val();
-        if (initialRecurrenceType) {
+        if (initialRecurrenceType && initialRecurrenceType !== "None" && initialRecurrenceType !== "") {
             $('#recurrence-end-date').show();
         } else {
             $('#recurrence-end-date').hide();

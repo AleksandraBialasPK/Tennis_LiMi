@@ -113,6 +113,10 @@ form {
     color: #046380;
 }
 
+.input-container:hover {
+    cursor: pointer;
+}
+
 input[type='password'] {
     color: #515151;
     letter-spacing: 0.1em;
@@ -127,6 +131,7 @@ input[type='text'] {
 .input-container:focus,
 .input-container:hover {
     border-bottom-color: #95bab3;
+    cursor: pointer;
 }
 
 input.login-input:focus {
