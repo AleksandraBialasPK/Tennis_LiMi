@@ -102,6 +102,7 @@ form {
     width: 100%;
     transition: .2s;
     color: #303030;
+    font-size: 16px;
 }
 
 .input-container {
@@ -138,6 +139,9 @@ input.login-input:focus {
     outline: none;
 }
 
+input.login-input:hover{
+    cursor: pointer;
+}
 .login-button-container {
     display: flex;
     flex-direction: column;
@@ -149,14 +153,16 @@ input.login-input:focus {
 
 button {
     box-sizing: border-box;
-    width: 80px;
-    height: 40px;
+    width: 100px;
+    height: 50px;
     min-width: 30%;
     background: rgba(4, 99, 128, 0.95);
     color: #F7F7F5;
     border: 1px solid #046380;
     border-radius: 4px;
     cursor: pointer;
+    margin: 10px;
+    font-size: 16px;
 }
 
 button:active,
@@ -170,6 +176,7 @@ button:hover {
     background: rgba(4, 99, 128, 0.0);
     color: rgba(4, 99, 128, 0.95);
     border: 1px solid rgba(4, 99, 128, 0.0);
+    font-size: 16px;
 }
 
 .logo {
