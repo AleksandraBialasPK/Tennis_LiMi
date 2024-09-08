@@ -613,19 +613,17 @@ class DayView(LoginRequiredMixin, TemplateView):
         game = get_object_or_404(Game, game_id=game_id, creator=request.user)
 
         if game.creator == request.user:
-            if game.group:
-                Game.objects.filter(group=game.group, start_date_and_time__gte=game.start_date_and_time).delete()
-                remaining_games = Game.objects.filter(group=game.group)
-
-                if not remaining_games:
+            if game.group not in [None, '', 'none', 'Null', 'null']:
+                game.delete()
+                return JsonResponse({'success': True, 'message': 'Game deleted successfully'})
+            else:
+                Game.objects.filter(group=game.group_id).delete()
+                remaining_games = Game.objects.filter(group=game.group_id)
+                if not remaining_games.exists():
                     game.group.delete()
 
                 return JsonResponse({'success': True, 'message': 'Games deleted successfully'})
-            else:
-                game.delete()
-                game.group.delete()
-            game.delete()
-            return JsonResponse({'success': True, 'message': 'Game deleted successfully'})
+
         else:
             return JsonResponse({'success': False, 'message': 'You do not have permission to delete this game'},
                                 status=403)
