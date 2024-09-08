@@ -308,17 +308,6 @@ function openEditForm(gameId) {
                 // Show the recurrence end date section if it's hidden
                 document.getElementById('recurrence-end-date').style.display = 'block';
             }
-            if (data.group) {
-                console.log("Appending update options"); // Check if this line is reached
-                const updateHtml = `
-                    <div class="add-event-form-divs">
-                        <label for="update_all">Update:</label>
-                        <input type="radio" id="update_one" name="update_all" value="false" checked> Only this event
-                        <input type="radio" id="update_all" name="update_all" value="true"> All future events in this group
-                    </div>
-                `;
-                form.insertAdjacentHTML('beforebegin', updateHtml);
-            }
 
             const participantSelect = form.querySelector('[name="participants"]');
             if (participantSelect) {

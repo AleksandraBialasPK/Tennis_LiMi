@@ -128,14 +128,14 @@ def get_previous_event(user_games, new_game_start):
     """
     preceding_event = None
     for game in user_games:
-        if game.end_date_and_time <= new_game_start:
+        if game.end_date_and_time < new_game_start:
             preceding_event = game
         else:
             break
     return preceding_event
 
 
-def get_following_event(user_games, new_game_end):
+def get_following_event(user_games, current_game):
     """
     Get the next event that starts after the new game ends.
     :param user_games: A queryset of the user's games.
@@ -143,8 +143,8 @@ def get_following_event(user_games, new_game_end):
     :return: The following event or None if no such event exists.
     """
     following_event = None
-    for game in user_games:
-        if game.start_date_and_time >= new_game_end:
+    for game in user_games.exclude(game_id=current_game.game_id):
+        if game.start_date_and_time > current_game.end_date_and_time:
             following_event = game
             break
     return following_event
