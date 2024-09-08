@@ -362,7 +362,7 @@ class DayView(LoginRequiredMixin, TemplateView):
                 'success': False,
                 'message': f"There are conflicts for the following participants:\n" +
                            "\n".join([
-                               f"{conflict['participant']} has a time conflict (Travel: {math.ceil(conflict['travel_time'])} mins, Gap: {math.ceil(conflict['time_available'])} mins)"
+                               f"{conflict['participant']}: (Travel: {math.ceil(conflict['travel_time'] or 0)} mins, Gap: {math.ceil(conflict['time_available'] or 0)} mins)"
                                for conflict in conflicts]),
                 'confirm_needed': True
             }, status=409)
@@ -398,37 +398,44 @@ class DayView(LoginRequiredMixin, TemplateView):
     def _handle_participants(self, request, game_instance, participants, is_update, dry_run=False):
         conflicts = []
         processed_events = set()
+        current_participants = set()
 
-        # Get current participants (as user IDs)
-        current_participants = set(game_instance.participant_set.all().values_list('user', flat=True))
+        # Only retrieve current participants if it's an update and game_instance is saved
+        if game_instance.game_id and is_update:
+            current_participants = set(game_instance.participant_set.all().values_list('user', flat=True))
 
         if is_update:
-            # Get new participants from the form (as user IDs)
             new_participants = set(participants.values_list('user_id', flat=True))
             participants_to_remove = current_participants - new_participants
             participants_to_add = new_participants - current_participants
 
-            # Remove participants
             if not dry_run:
                 for participant_id in participants_to_remove:
                     Participant.objects.filter(user__user_id=participant_id, game=game_instance).delete()
 
-                # Add new participants
                 for user_id in participants_to_add:
                     user_instance = CustomUser.objects.get(user_id=user_id)
                     Participant.objects.get_or_create(user=user_instance, game=game_instance)
+
+                simulated_participants = set(game_instance.participant_set.all().values_list('user', flat=True))
+            else:
+                simulated_participants = new_participants
         else:
+            simulated_participants = set(participants.values_list('user_id', flat=True))
+
             if not dry_run:
-                for user in participants:  # Use the participants from the form
+                for user in participants:
                     Participant.objects.get_or_create(user=user, game=game_instance)
 
-        for user_id in current_participants:
+        for user_id in simulated_participants:
             user_instance = CustomUser.objects.get(user_id=user_id)
+            print(f'looping through {user_instance}')
             if not dry_run:
                 participant_instance, _ = Participant.objects.get_or_create(user=user_instance, game=game_instance)
             else:
                 participant_instance = Participant(user=user_instance, game=game_instance)
 
+            # Get games of this participant on the same day
             participant_games = Game.objects.filter(
                 participant__user=user_instance,
                 start_date_and_time__date=game_instance.start_date_and_time.date()
@@ -463,6 +470,9 @@ class DayView(LoginRequiredMixin, TemplateView):
         Helper function to handle participant conflict checks.
         If dry_run is False, it also saves the calculated travel time, available time, and alert to the database.
         """
+        if not preceding_event:
+            return None
+
         event_end_time = preceding_event.end_date_and_time
         new_game_start = following_event.start_date_and_time
         event_court = preceding_event.court
@@ -478,7 +488,7 @@ class DayView(LoginRequiredMixin, TemplateView):
             new_game_court,
             request
         )
-        print(f"Travel time: {travel_time}, Time available: {time_available}, Alert: {alert}")
+        print(f"{participant_instance.name}: Travel time: {travel_time}, Time available: {time_available}, Alert: {alert}")
 
         if not dry_run:
             participant_instance.alert = alert
@@ -486,11 +496,12 @@ class DayView(LoginRequiredMixin, TemplateView):
             participant_instance.time_available = time_available
             participant_instance.save()
 
-        if alert and request.POST.get('confirm') != 'true':
+        if travel_time > time_available:
             return {
                 'participant': participant_instance.user.username,
                 'travel_time': travel_time,
                 'time_available': time_available,
+                'alert': alert
             }
 
         return None
@@ -604,7 +615,8 @@ class DayView(LoginRequiredMixin, TemplateView):
     def handle_game_delete(self, request):
         """
         Handle the deletion of a game. Checks if the user is the creator of the game
-        and deletes it if permitted.
+        and deletes it if permitted. Also, updates travel time, time available, and alert
+        for participants in adjacent games after the deletion.
 
         :param request: The HTTP request object.
         :return: A JSON response indicating success or failure of the game deletion.
@@ -612,21 +624,71 @@ class DayView(LoginRequiredMixin, TemplateView):
         game_id = request.POST.get('game_id')
         game = get_object_or_404(Game, game_id=game_id, creator=request.user)
 
-        if game.creator == request.user:
-            if game.group not in [None, '', 'none', 'Null', 'null']:
-                game.delete()
-                return JsonResponse({'success': True, 'message': 'Game deleted successfully'})
-            else:
-                Game.objects.filter(group=game.group_id).delete()
-                remaining_games = Game.objects.filter(group=game.group_id)
-                if not remaining_games.exists():
-                    game.group.delete()
-
-                return JsonResponse({'success': True, 'message': 'Games deleted successfully'})
-
-        else:
+        if game.creator != request.user:
             return JsonResponse({'success': False, 'message': 'You do not have permission to delete this game'},
                                 status=403)
+
+        # Identify participants of the game to be deleted
+        participants = game.participant_set.all()
+
+        adjacent_games = {}
+        for participant in participants:
+            preceding_game, following_game = self._get_adjacent_games(participant.user, game)
+            if preceding_game or following_game:
+                adjacent_games[participant.user] = (preceding_game, following_game)
+
+        # Delete the game (either group or single occurrence)
+        if game.group_id:
+            Game.objects.filter(group=game.group_id).delete()
+            remaining_games = Game.objects.filter(group=game.group_id)
+            if not remaining_games.exists():
+                game.group.delete()
+        else:
+            game.delete()
+
+        # After deletion, update travel time, time available, and alert for adjacent games
+        for user, (preceding_game, following_game) in adjacent_games.items():
+            self._update_conflicts_after_deletion(user, preceding_game, following_game)
+
+        return JsonResponse({'success': True, 'message': 'Game(s) deleted successfully'})
+
+    def _get_adjacent_games(self, user, game):
+        """
+        Get the preceding and following games for a participant on the same day as the given game.
+        """
+        games_on_same_day = Game.objects.filter(
+            participant__user=user,
+            start_date_and_time__date=game.start_date_and_time.date()
+        ).exclude(game_id=game.game_id).order_by('start_date_and_time')
+
+        preceding_game = get_previous_event(games_on_same_day, game.start_date_and_time)
+        following_game = get_following_event(games_on_same_day, game)
+
+        return preceding_game, following_game
+
+    def _update_conflicts_after_deletion(self, user, preceding_game, following_game):
+        """
+        Updates travel time, available time, and alert between adjacent games.
+        Handles cases where either preceding or following game is None.
+        """
+        if preceding_game and following_game:
+            # Both games exist, handle conflicts between them
+            participant_instance = Participant.objects.get(user=user, game=following_game)
+            self._check_participant_conflict(
+                request=None,
+                participant_instance=participant_instance,
+                preceding_event=preceding_game,
+                following_event=following_game,
+                dry_run=False
+            )
+        elif following_game:
+            # Only the following game exists, no preceding game
+            participant_instance = Participant.objects.get(user=user, game=following_game)
+            # Reset the alert, travel_time, and available_time for this game
+            participant_instance.alert = False
+            participant_instance.travel_time = None
+            participant_instance.time_available = None
+            participant_instance.save()
 
     def handle_category_form(self, request):
         """
