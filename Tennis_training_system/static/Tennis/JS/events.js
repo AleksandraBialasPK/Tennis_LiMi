@@ -192,7 +192,6 @@ function showEventDetails(gameId) {
             'fetch_game_details': 'true'
         },
         success: function(data) {
-
             const modal = document.getElementById('eventDetailsModal');
 
             modal.querySelector('.modal-title').textContent = data.name;
@@ -219,12 +218,17 @@ function showEventDetails(gameId) {
                 editButton.style.display = 'inline-block';
                 deleteButton.style.display = 'inline-block';
 
-                editButton.addEventListener('click', function() {
-                    openEditForm(gameIdData);
+                // Remove previous event listeners from the delete button by cloning it
+                const newDeleteButton = deleteButton.cloneNode(true);
+                deleteButton.parentNode.replaceChild(newDeleteButton, deleteButton);
+
+                // Attach a new event listener to the delete button for the current game
+                newDeleteButton.addEventListener('click', function() {
+                    deleteGame(gameIdData);
                 });
 
-                deleteButton.addEventListener('click', function() {
-                    deleteGame(gameIdData);
+                editButton.addEventListener('click', function() {
+                    openEditForm(gameIdData);
                 });
             } else {
                 editButton.style.display = 'none';

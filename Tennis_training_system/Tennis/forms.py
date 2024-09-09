@@ -42,6 +42,13 @@ class GameForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'type': 'date', 'id': 'id_end_date_of_recurrence'})
     )
 
+    participants = forms.ModelMultipleChoiceField(
+        queryset=CustomUser.objects.all(),
+        widget=ParticipantsWidget,
+        label="Participants",
+        required=False
+    )
+
     class Meta:
         model = Game
         fields = ['name', 'category', 'start_date_and_time', 'end_date_and_time', 'court', 'participants', 'recurrence_type']
@@ -52,8 +59,6 @@ class GameForm(forms.ModelForm):
 
     category = forms.ModelChoiceField(queryset=Category.objects.all(), label="Category")
     court = forms.ModelChoiceField(queryset=Court.objects.all(), label="Court")
-    participants = forms.ModelMultipleChoiceField(queryset=CustomUser.objects.all(), widget=ParticipantsWidget,
-                                                  label="Participants")
 
     def clean(self):
         cleaned_data = super().clean()
