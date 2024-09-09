@@ -17,7 +17,7 @@ from django.contrib.auth.views import LogoutView
 from django.shortcuts import get_object_or_404
 from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
 from django.views.generic import FormView, TemplateView, View
-from .models import Game, Category, Participant, Court, CustomUser
+from .models import Game, Category, Participant, Court, CustomUser, RecurringGroup
 from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import timedelta, datetime, timezone, time
 from django.http import JsonResponse, Http404
@@ -351,6 +351,8 @@ class DayView(LoginRequiredMixin, TemplateView):
             return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
         participants = game_form.cleaned_data.get('participants', [])
+        recurrence_type = game_form.cleaned_data.get('recurrence_type')
+        end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
 
         game_instance = self._save_game_instance(game_form, game_instance, request, is_update, commit=False)
 
@@ -367,15 +369,21 @@ class DayView(LoginRequiredMixin, TemplateView):
                 'confirm_needed': True
             }, status=409)
 
+        if not is_update:
+            if recurrence_type not in [None, '', 'none', 'Null', 'null'] and end_date_of_recurrence:
+                recurring_group = RecurringGroup.objects.create(
+                    recurrence_type=recurrence_type,
+                    start_date=game_instance.start_date_and_time.date(),
+                    end_date=end_date_of_recurrence
+                )
+                game_instance.group = recurring_group
+
         game_instance = self._save_game_instance(game_form, game_instance, request, is_update, commit=True)
         self._handle_participants(request, game_instance, participants, is_update, dry_run=False)
 
         game_form.save_m2m()
 
-        recurrence_type = game_form.cleaned_data.get('recurrence_type')
-        end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
-
-        if is_update and recurrence_type not in [None, '', 'none', 'Null', 'null']:
+        if is_update and game_instance.group:
             self._handle_recurrence_update(game_instance, participants)
         elif recurrence_type not in [None, '', 'none', 'Null', 'null'] and end_date_of_recurrence:
             self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
@@ -397,7 +405,6 @@ class DayView(LoginRequiredMixin, TemplateView):
 
     def _handle_participants(self, request, game_instance, participants, is_update, dry_run=False):
         conflicts = []
-        processed_events = set()
         current_participants = set()
 
         # Only retrieve current participants if it's an update and game_instance is saved
@@ -435,25 +442,21 @@ class DayView(LoginRequiredMixin, TemplateView):
             else:
                 participant_instance = Participant(user=user_instance, game=game_instance)
 
-            # Get games of this participant on the same day
             participant_games = Game.objects.filter(
                 participant__user=user_instance,
                 start_date_and_time__date=game_instance.start_date_and_time.date()
             ).order_by('start_date_and_time')
 
-            # Preceding event conflict check
             participant_preceding_event = get_previous_event(participant_games, game_instance.start_date_and_time)
-            if participant_preceding_event and participant_preceding_event not in processed_events:
+            if participant_preceding_event:
                 conflict = self._check_participant_conflict(
                     request, participant_instance, participant_preceding_event, game_instance, dry_run
                 )
                 if conflict:
                     conflicts.append(conflict)
-                processed_events.add(participant_preceding_event)
 
-            # Following event conflict check
             participant_following_event = get_following_event(participant_games, game_instance)
-            if participant_following_event and participant_following_event not in processed_events:
+            if participant_following_event:
                 following_event_participants = participant_following_event.participant_set.all()
                 for following_participant in following_event_participants:
                     conflict = self._check_participant_conflict(
@@ -461,7 +464,6 @@ class DayView(LoginRequiredMixin, TemplateView):
                     )
                     if conflict:
                         conflicts.append(conflict)
-                processed_events.add(participant_following_event)
 
         return conflicts
 
@@ -470,7 +472,11 @@ class DayView(LoginRequiredMixin, TemplateView):
         Helper function to handle participant conflict checks.
         If dry_run is False, it also saves the calculated travel time, available time, and alert to the database.
         """
-        if not preceding_event:
+        if preceding_event is None:
+            participant_instance.alert = False
+            participant_instance.travel_time = None
+            participant_instance.time_available = None
+            participant_instance.save()
             return None
 
         event_end_time = preceding_event.end_date_and_time
@@ -488,7 +494,6 @@ class DayView(LoginRequiredMixin, TemplateView):
             new_game_court,
             request
         )
-        print(f"{participant_instance.name}: Travel time: {travel_time}, Time available: {time_available}, Alert: {alert}")
 
         if not dry_run:
             participant_instance.alert = alert
@@ -496,13 +501,14 @@ class DayView(LoginRequiredMixin, TemplateView):
             participant_instance.time_available = time_available
             participant_instance.save()
 
-        if travel_time > time_available:
-            return {
-                'participant': participant_instance.user.username,
-                'travel_time': travel_time,
-                'time_available': time_available,
-                'alert': alert
-            }
+        if travel_time is not None and time_available is not None:
+            if travel_time > time_available:
+                return {
+                    'participant': participant_instance.user.username,
+                    'travel_time': travel_time,
+                    'time_available': time_available,
+                    'alert': alert
+                }
 
         return None
 
@@ -532,19 +538,26 @@ class DayView(LoginRequiredMixin, TemplateView):
                 for user in participants:
                     Participant.objects.create(user=user, game=game_instance)
 
-                conflicts = self._handle_participants(
-                    request=None,
-                    participants=participants,
-                    new_game_start=game_instance.start_date_and_time,
-                    new_game_end=game_instance.end_date_and_time,
-                    new_game_court=game_instance.court,
-                    game_instance=game_instance,
-                    is_update=True,
-                    dry_run=False
-                )
+                for participant in participants:
+                    print(f"Processing participant: {participant.username}")
 
-                if conflicts:
-                    print(f"Conflicts found for game instance on {game_instance.start_date_and_time}: {conflicts}")
+                    participant_games = Game.objects.filter(
+                        participant__user=participant,
+                        start_date_and_time__date=game.start_date_and_time.date()
+                    ).order_by('start_date_and_time')
+
+                    participant_preceding_event = get_previous_event(participant_games, game.start_date_and_time)
+                    if participant_preceding_event:
+                        self._check_participant_conflict(
+                            None, participant, participant_preceding_event, game, dry_run=False
+                        )
+
+                    participant_following_event = get_following_event(participant_games, game)
+                    if participant_following_event:
+                        following_event_participants = participant_following_event.participant_set.all()
+                        for following_participant in following_event_participants:
+                            self._check_participant_conflict(
+                                None, following_participant, game, participant_following_event, dry_run=False)
 
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
@@ -576,18 +589,27 @@ class DayView(LoginRequiredMixin, TemplateView):
                 for user in participants:
                     Participant.objects.create(user=user, game=new_game)
 
-                conflicts = self._handle_participants(
-                    request=None,
-                    participants=participants,
-                    new_game_start=new_game.start_date_and_time,
-                    new_game_end=new_game.end_date_and_time,
-                    new_game_court=new_game.court,
-                    game_instance=new_game,
-                    is_update=False,
-                    dry_run=False
-                )
-                if conflicts:
-                    print(f"Conflicts found for new game instance on {new_game.start_date_and_time}: {conflicts}")
+                # Check for adjacent games (preceding and following) for each participant
+                for participant in participants:
+                    print(f"Processing participant: {participant.username}")
+
+                    participant_games = Game.objects.filter(
+                        participant__user=participant,
+                        start_date_and_time__date=game.start_date_and_time.date()
+                    ).order_by('start_date_and_time')
+
+                    participant_preceding_event = get_previous_event(participant_games, game.start_date_and_time)
+                    if participant_preceding_event:
+                        self._check_participant_conflict(
+                            None, participant, participant_preceding_event, game, dry_run=False
+                        )
+
+                    participant_following_event = get_following_event(participant_games, game)
+                    if participant_following_event:
+                        following_event_participants = participant_following_event.participant_set.all()
+                        for following_participant in following_event_participants:
+                            self._check_participant_conflict(
+                                None, following_participant, game, participant_following_event, dry_run=False)
 
             delta = self._get_delta_by_recurrence_type(recurrence_type, idx)
 
@@ -638,13 +660,10 @@ class DayView(LoginRequiredMixin, TemplateView):
                 adjacent_games[participant.user] = (preceding_game, following_game)
 
         # Delete the game (either group or single occurrence)
-        if game.group_id:
-            Game.objects.filter(group=game.group_id).delete()
-            remaining_games = Game.objects.filter(group=game.group_id)
-            if not remaining_games.exists():
-                game.group.delete()
+        if game.group not in [None, '', 'none', 'Null', 'null']:
+            Game.objects.filter(group=game.group).delete()
         else:
-            game.delete()
+            Game.objects.filter(game_id=game_id).delete()
 
         # After deletion, update travel time, time available, and alert for adjacent games
         for user, (preceding_game, following_game) in adjacent_games.items():
@@ -679,6 +698,17 @@ class DayView(LoginRequiredMixin, TemplateView):
                 participant_instance=participant_instance,
                 preceding_event=preceding_game,
                 following_event=following_game,
+                dry_run=False
+            )
+        elif preceding_game:
+            participant_instance = Participant.objects.get(user=user, game=preceding_game)
+            pre_preceding_current = self._get_adjacent_games(participant_instance.user, preceding_game)
+            pre_preceding = pre_preceding_current[0]
+            self._check_participant_conflict(
+                request=None,
+                participant_instance=participant_instance,
+                preceding_event=pre_preceding,
+                following_event=preceding_game,
                 dry_run=False
             )
         elif following_game:
