@@ -1,8 +1,10 @@
 import math
 import requests
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from Tennis_training_system import settings
-from .models import Game
+from .models import Game, Participant, CustomUser
 
 
 def ask_MapBox_for_travel_time(origin_lat, origin_lon, dest_lat, dest_lon, api_key):
@@ -58,67 +60,6 @@ def check_if_enough_time(event_end_time, next_event_start_time, event_court, nex
     return travel_time, time_available, alert
 
 
-def recalculate_travel_time_for_games(updated_court):
-    """
-    Recalculate travel time for all games involving an updated court.
-    Only affects games scheduled after the court update datetime.
-    """
-    update_time = now()
-
-    affected_games = Game.objects.filter(
-        court=updated_court,
-        start_date_and_time__gte=update_time
-    )
-
-    print(f"Affected games count: {affected_games.count()}")
-    for game in affected_games:
-        print(f"Processing game: {game.name}, ID: {game.game_id}")
-        user_games = Game.objects.filter(
-            creator=game.creator,
-            start_date_and_time__gte=update_time
-        ).order_by('start_date_and_time')
-
-        preceding_event = get_previous_event(user_games, game.start_date_and_time)
-        following_event = get_following_event(user_games, game.end_date_and_time)
-
-        if preceding_event:
-            travel_time, time_available, alert = check_if_enough_time(
-                preceding_event.end_date_and_time,
-                game.start_date_and_time,
-                preceding_event.court,
-                updated_court
-            )
-            update_alert_status(game, travel_time, time_available, alert)
-
-        if following_event:
-            travel_time, time_available, alert = check_if_enough_time(
-                game.end_date_and_time,
-                following_event.start_date_and_time,
-                updated_court,
-                following_event.court
-            )
-            update_alert_status(game, travel_time, time_available, alert)
-
-
-def update_alert_status(game, travel_time, time_available, alert):
-    """
-    Update the alert status, travel time, and available time for a game.
-    """
-    if travel_time is not None:
-        game.alert = alert
-        game.travel_time = travel_time
-        game.time_available = time_available
-        game.save()
-
-        participants = game.participant_set.all()
-
-        for participant in participants:
-            participant.alert = alert
-            participant.travel_time = travel_time
-            participant.time_available = time_available
-            participant.save()
-
-
 def get_previous_event(user_games, new_game_start):
     """
     Get the most recent event that ends before the new game starts.
@@ -128,14 +69,14 @@ def get_previous_event(user_games, new_game_start):
     """
     preceding_event = None
     for game in user_games:
-        if game.end_date_and_time <= new_game_start:
+        if game.end_date_and_time < new_game_start:
             preceding_event = game
         else:
             break
     return preceding_event
 
 
-def get_following_event(user_games, new_game_end):
+def get_following_event(user_games, current_game):
     """
     Get the next event that starts after the new game ends.
     :param user_games: A queryset of the user's games.
@@ -143,8 +84,8 @@ def get_following_event(user_games, new_game_end):
     :return: The following event or None if no such event exists.
     """
     following_event = None
-    for game in user_games:
-        if game.start_date_and_time >= new_game_end:
+    for game in user_games.exclude(game_id=current_game.game_id):
+        if game.start_date_and_time > current_game.end_date_and_time:
             following_event = game
             break
     return following_event

@@ -3,7 +3,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.utils.timezone import now
+from django.utils.timezone import now, make_aware, is_naive
 from Tennis_training_system import settings
 from django.db.models import F
 from django.conf import settings
@@ -17,9 +17,9 @@ from django.contrib.auth.views import LogoutView
 from django.shortcuts import get_object_or_404
 from .forms import EmailAuthenticationForm,  GameForm, CourtForm, CategoryForm, ProfilePictureUpdateForm, CustomPasswordChangeForm
 from django.views.generic import FormView, TemplateView, View
-from .models import Game, Category, Participant, Court
+from .models import Game, Category, Participant, Court, CustomUser, RecurringGroup
 from django.contrib.auth.mixins import LoginRequiredMixin
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone, time
 from django.http import JsonResponse, Http404
 import logging
 
@@ -190,6 +190,9 @@ class DayView(LoginRequiredMixin, TemplateView):
                     'court_name': game.court.name,
                     'participants': list(game.participant_set.values_list('user__email', 'user__username')),
                     'is_creator': (game.creator == request.user),
+                    'group': game.group.group_id if game.group else None,
+                    'recurrence_type': game.group.recurrence_type if game.group else None,
+                    'end_date_of_recurrence': game.group.end_date if game.group else None,
                 }
                 return JsonResponse(game_data)
 
@@ -341,28 +344,19 @@ class DayView(LoginRequiredMixin, TemplateView):
         Core logic for handling both creation and update of a game.
         This method processes the game form, checks for scheduling conflicts
         for both the game creator and each participant, and handles recurrence logic.
-
-        :param request: The HTTP request object.
-        :param is_update: Boolean indicating if this is an update operation.
-        :param game_instance: The game instance to update, if applicable.
-        :return: A JSON response indicating success or failure of the operation.
         """
         game_form = GameForm(request.POST, instance=game_instance) if is_update else GameForm(request.POST)
 
         if not game_form.is_valid():
             return JsonResponse({'success': False, 'errors': game_form.errors.as_json()}, status=400)
 
-        new_game_start = game_form.cleaned_data['start_date_and_time']
-        new_game_end = game_form.cleaned_data['end_date_and_time']
-        new_game_court = game_form.cleaned_data['court']
         participants = game_form.cleaned_data.get('participants', [])
+        recurrence_type = game_form.cleaned_data.get('recurrence_type')
+        end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
 
-        game_instance = self._save_game_instance(game_form, game_instance, request, is_update)
+        game_instance = self._save_game_instance(game_form, game_instance, request, is_update, commit=False)
 
-        game_form.save_m2m()
-
-        conflicts = self._handle_participants(request, participants, new_game_start, new_game_end, new_game_court, game_instance,
-                                  is_update)
+        conflicts = self._handle_participants(request, game_instance, participants, is_update, dry_run=True)
 
         if len(conflicts) > 0 and request.POST.get('confirm') != 'true':
             logger.info(f'Sending conflicts response: {conflicts}')
@@ -370,107 +364,200 @@ class DayView(LoginRequiredMixin, TemplateView):
                 'success': False,
                 'message': f"There are conflicts for the following participants:\n" +
                            "\n".join([
-                               f"{conflict['participant']} has a time conflict (Travel: {math.ceil(conflict['travel_time'])} mins, Gap: {math.ceil(conflict['time_available'])} mins)"
+                               f"{conflict['participant']}: (Travel: {math.ceil(conflict['travel_time'] or 0)} mins, Gap: {math.ceil(conflict['time_available'] or 0)} mins)"
                                for conflict in conflicts]),
                 'confirm_needed': True
             }, status=409)
 
-        recurrence_type = game_form.cleaned_data.get('recurrence_type')
-        end_date_of_recurrence = game_form.cleaned_data.get('end_date_of_recurrence')
+        if not is_update:
+            if recurrence_type not in [None, '', 'none', 'Null', 'null'] and end_date_of_recurrence:
+                recurring_group = RecurringGroup.objects.create(
+                    recurrence_type=recurrence_type,
+                    start_date=game_instance.start_date_and_time.date(),
+                    end_date=end_date_of_recurrence
+                )
+                game_instance.group = recurring_group
 
-        if recurrence_type and end_date_of_recurrence:
+        game_instance = self._save_game_instance(game_form, game_instance, request, is_update, commit=True)
+        self._handle_participants(request, game_instance, participants, is_update, dry_run=False)
+
+        game_form.save_m2m()
+
+        if is_update and game_instance.group:
+            self._handle_recurrence_update(game_instance, participants)
+        elif recurrence_type not in [None, '', 'none', 'Null', 'null'] and end_date_of_recurrence:
             self._handle_recurrence(game_instance, participants, recurrence_type, end_date_of_recurrence)
 
         return JsonResponse({'success': True, 'message': 'Game added successfully'})
 
-    def _save_game_instance(self, game_form, game_instance, request, is_update):
+    def _save_game_instance(self, game_form, game_instance, request, is_update, commit=True):
         """
         Save the game instance and assign the creator if it's a new game.
+        If commit is False, it saves the instance but doesn't commit to the database yet.
         """
-        game_instance = game_form.save(commit=False)
+        game_instance = game_form.save(commit=False)  # Save the form but don't commit yet
         if not is_update:
             game_instance.creator = request.user
-        game_instance.save()
+
+        if commit:
+            game_instance.save()  # Now commit to the database if commit is True
         return game_instance
 
-    def _handle_participants(self, request, participants, new_game_start, new_game_end, new_game_court, game_instance,
-                             is_update):
-        """
-        Handle participant conflicts and save their data.
-        """
+    def _handle_participants(self, request, game_instance, participants, is_update, dry_run=False):
         conflicts = []
+        current_participants = set()
+
+        # Only retrieve current participants if it's an update and game_instance is saved
+        if game_instance.game_id and is_update:
+            current_participants = set(game_instance.participant_set.all().values_list('user', flat=True))
 
         if is_update:
-            game_instance.participant_set.all().delete()
+            new_participants = set(participants.values_list('user_id', flat=True))
+            participants_to_remove = current_participants - new_participants
+            participants_to_add = new_participants - current_participants
 
-        for user in participants:
-            participant_instance = Participant.objects.create(user=user, game=game_instance)
+            if not dry_run:
+                for participant_id in participants_to_remove:
+                    Participant.objects.filter(user__user_id=participant_id, game=game_instance).delete()
+
+                for user_id in participants_to_add:
+                    user_instance = CustomUser.objects.get(user_id=user_id)
+                    Participant.objects.get_or_create(user=user_instance, game=game_instance)
+
+                simulated_participants = set(game_instance.participant_set.all().values_list('user', flat=True))
+            else:
+                simulated_participants = new_participants
+        else:
+            simulated_participants = set(participants.values_list('user_id', flat=True))
+
+            if not dry_run:
+                for user in participants:
+                    Participant.objects.get_or_create(user=user, game=game_instance)
+
+        for user_id in simulated_participants:
+            user_instance = CustomUser.objects.get(user_id=user_id)
+            print(f'looping through {user_instance}')
+            if not dry_run:
+                participant_instance, _ = Participant.objects.get_or_create(user=user_instance, game=game_instance)
+            else:
+                participant_instance = Participant(user=user_instance, game=game_instance)
 
             participant_games = Game.objects.filter(
-                participant__user=user,
-                start_date_and_time__date=new_game_start.date()
+                participant__user=user_instance,
+                start_date_and_time__date=game_instance.start_date_and_time.date()
             ).order_by('start_date_and_time')
 
-            participant_preceding_event = get_previous_event(participant_games, new_game_start)
+            participant_preceding_event = get_previous_event(participant_games, game_instance.start_date_and_time)
             if participant_preceding_event:
                 conflict = self._check_participant_conflict(
-                    request, participant_instance, participant_preceding_event, new_game_start, new_game_court,
-                    "preceding"
+                    request, participant_instance, participant_preceding_event, game_instance, dry_run
                 )
                 if conflict:
                     conflicts.append(conflict)
 
-            participant_following_event = get_following_event(participant_games, new_game_end)
+            participant_following_event = get_following_event(participant_games, game_instance)
             if participant_following_event:
-                conflict = self._check_participant_conflict(
-                    request, participant_instance, new_game_end, participant_following_event.start_date_and_time,
-                    new_game_court, "following"
-                )
-                if conflict:
-                    conflicts.append(conflict)
-
-        for conflict in conflicts:
-            print(f'conflict: {conflict}\n')
+                following_event_participants = participant_following_event.participant_set.all()
+                for following_participant in following_event_participants:
+                    conflict = self._check_participant_conflict(
+                        request, following_participant, game_instance, participant_following_event, dry_run
+                    )
+                    if conflict:
+                        conflicts.append(conflict)
 
         return conflicts
 
-    def _check_participant_conflict(self, request, participant_instance, preceding_event_or_end, new_game_start_or_end,
-                                    new_game_court, event_type):
+    def _check_participant_conflict(self, request, participant_instance, preceding_event, following_event, dry_run=False):
         """
         Helper function to handle participant conflict checks.
+        If dry_run is False, it also saves the calculated travel time, available time, and alert to the database.
         """
-        if event_type == "preceding":
-            event_end_time = getattr(preceding_event_or_end, 'end_date_and_time', preceding_event_or_end)
-            event_court = getattr(preceding_event_or_end, 'court', None)
-            event_start_time = new_game_start_or_end
-        else:
-            event_end_time = new_game_start_or_end
-            event_start_time = getattr(preceding_event_or_end, 'start_date_and_time', preceding_event_or_end)
-            event_court = getattr(preceding_event_or_end, 'court', None)
+        if preceding_event is None:
+            participant_instance.alert = False
+            participant_instance.travel_time = None
+            participant_instance.time_available = None
+            participant_instance.save()
+            return None
+
+        event_end_time = preceding_event.end_date_and_time
+        new_game_start = following_event.start_date_and_time
+        event_court = preceding_event.court
+        new_game_court = following_event.court
 
         if not event_court:
             return
 
         travel_time, time_available, alert = check_if_enough_time(
             event_end_time,
-            event_start_time,
+            new_game_start,
             event_court,
             new_game_court,
             request
         )
 
-        participant_instance.alert = alert
-        participant_instance.travel_time = travel_time
-        participant_instance.time_available = time_available
-        participant_instance.save()
+        if not dry_run:
+            participant_instance.alert = alert
+            participant_instance.travel_time = travel_time
+            participant_instance.time_available = time_available
+            participant_instance.save()
 
-        if alert and request.POST.get('confirm') != 'true':
-            return {
-                'participant': participant_instance.user.username,
-                'travel_time': travel_time,
-                'time_available': time_available,
-            }
+        if travel_time is not None and time_available is not None:
+            if travel_time > time_available:
+                return {
+                    'participant': participant_instance.user.username,
+                    'travel_time': travel_time,
+                    'time_available': time_available,
+                    'alert': alert
+                }
+
         return None
+
+    def _handle_recurrence_update(self, game, participants):
+        print("handling reccurence update!!!!!!")
+        current_start = game.start_date_and_time
+        current_end = game.end_date_and_time
+        idx = 0
+
+        if game.group_id:
+            games_in_group = Game.objects.filter(group_id=game.group.group_id).order_by('start_date_and_time')
+
+            for idx, game_instance in enumerate(games_in_group):
+                if idx == 0:
+                    game_instance.start_date_and_time = current_start
+                    game_instance.end_date_and_time = current_end
+                else:
+                    delta = self._get_delta_by_recurrence_type(game.group.recurrence_type, idx)
+                    game_instance.start_date_and_time = current_start + delta
+                    game_instance.end_date_and_time = current_end + delta
+
+                game_instance.court = game.court
+                game_instance.name = game.name
+                game_instance.save()
+
+                game_instance.participant_set.all().delete()
+                for user in participants:
+                    Participant.objects.create(user=user, game=game_instance)
+
+                for participant in participants:
+                    print(f"Processing participant: {participant.username}")
+
+                    participant_games = Game.objects.filter(
+                        participant__user=participant,
+                        start_date_and_time__date=game.start_date_and_time.date()
+                    ).order_by('start_date_and_time')
+
+                    participant_preceding_event = get_previous_event(participant_games, game.start_date_and_time)
+                    if participant_preceding_event:
+                        self._check_participant_conflict(
+                            None, participant, participant_preceding_event, game, dry_run=False
+                        )
+
+                    participant_following_event = get_following_event(participant_games, game)
+                    if participant_following_event:
+                        following_event_participants = participant_following_event.participant_set.all()
+                        for following_participant in following_event_participants:
+                            self._check_participant_conflict(
+                                None, following_participant, game, participant_following_event, dry_run=False)
 
     def _handle_recurrence(self, game, participants, recurrence_type, end_date_of_recurrence):
         """
@@ -481,11 +568,15 @@ class DayView(LoginRequiredMixin, TemplateView):
         :param recurrence_type: The type of recurrence (e.g., daily, weekly).
         :param end_date_of_recurrence: The end date for the recurrence.
         """
+        print("Handling recurrence creation")
+        end_date_of_recurrence = make_aware(datetime.combine(end_date_of_recurrence, time(23, 59)))
         current_start = game.start_date_and_time
         current_end = game.end_date_and_time
+        idx = 1
 
-        while current_start.date() <= end_date_of_recurrence:
+        while current_start <= end_date_of_recurrence:
             if current_start != game.start_date_and_time:
+                print(f"Creating game for date: {current_start}")
                 new_game = Game.objects.create(
                     name=game.name,
                     category=game.category,
@@ -498,23 +589,56 @@ class DayView(LoginRequiredMixin, TemplateView):
                 for user in participants:
                     Participant.objects.create(user=user, game=new_game)
 
-            if recurrence_type == 'daily':
-                current_start += timedelta(days=1)
-                current_end += timedelta(days=1)
-            elif recurrence_type == 'weekly':
-                current_start += timedelta(weeks=1)
-                current_end += timedelta(weeks=1)
-            elif recurrence_type == 'biweekly':
-                current_start += timedelta(weeks=2)
-                current_end += timedelta(weeks=2)
-            elif recurrence_type == 'monthly':
-                current_start += relativedelta(months=1)
-                current_end += relativedelta(months=1)
+                # Check for adjacent games (preceding and following) for each participant
+                for participant in participants:
+                    print(f"Processing participant: {participant.username}")
+
+                    participant_games = Game.objects.filter(
+                        participant__user=participant,
+                        start_date_and_time__date=game.start_date_and_time.date()
+                    ).order_by('start_date_and_time')
+
+                    participant_preceding_event = get_previous_event(participant_games, game.start_date_and_time)
+                    if participant_preceding_event:
+                        self._check_participant_conflict(
+                            None, participant, participant_preceding_event, game, dry_run=False
+                        )
+
+                    participant_following_event = get_following_event(participant_games, game)
+                    if participant_following_event:
+                        following_event_participants = participant_following_event.participant_set.all()
+                        for following_participant in following_event_participants:
+                            self._check_participant_conflict(
+                                None, following_participant, game, participant_following_event, dry_run=False)
+
+            delta = self._get_delta_by_recurrence_type(recurrence_type, idx)
+
+            print(f"Before applying delta: Start={current_start}, End={current_end}, Delta={delta}")
+            current_start += delta
+            current_end += delta
+            print(f"After applying delta: Start={current_start}, End={current_end}")
+
+            idx = 1
+
+    def _get_delta_by_recurrence_type(self, recurrence_type, idx):
+        """
+        Return the appropriate time delta based on recurrence type and index.
+        """
+        if recurrence_type == 'daily':
+            return timedelta(days=idx)
+        elif recurrence_type == 'weekly':
+            return timedelta(weeks=idx)
+        elif recurrence_type == 'biweekly':
+            return timedelta(weeks=2 * idx)
+        elif recurrence_type == 'monthly':
+            return relativedelta(months=idx)
+        return timedelta(0)
 
     def handle_game_delete(self, request):
         """
         Handle the deletion of a game. Checks if the user is the creator of the game
-        and deletes it if permitted.
+        and deletes it if permitted. Also, updates travel time, time available, and alert
+        for participants in adjacent games after the deletion.
 
         :param request: The HTTP request object.
         :return: A JSON response indicating success or failure of the game deletion.
@@ -522,12 +646,79 @@ class DayView(LoginRequiredMixin, TemplateView):
         game_id = request.POST.get('game_id')
         game = get_object_or_404(Game, game_id=game_id, creator=request.user)
 
-        if game.creator == request.user:
-            game.delete()
-            return JsonResponse({'success': True, 'message': 'Game deleted successfully'})
-        else:
+        if game.creator != request.user:
             return JsonResponse({'success': False, 'message': 'You do not have permission to delete this game'},
                                 status=403)
+
+        # Identify participants of the game to be deleted
+        participants = game.participant_set.all()
+
+        adjacent_games = {}
+        for participant in participants:
+            preceding_game, following_game = self._get_adjacent_games(participant.user, game)
+            if preceding_game or following_game:
+                adjacent_games[participant.user] = (preceding_game, following_game)
+
+        # Delete the game (either group or single occurrence)
+        if game.group not in [None, '', 'none', 'Null', 'null']:
+            Game.objects.filter(group=game.group).delete()
+        else:
+            Game.objects.filter(game_id=game_id).delete()
+
+        # After deletion, update travel time, time available, and alert for adjacent games
+        for user, (preceding_game, following_game) in adjacent_games.items():
+            self._update_conflicts_after_deletion(user, preceding_game, following_game)
+
+        return JsonResponse({'success': True, 'message': 'Game(s) deleted successfully'})
+
+    def _get_adjacent_games(self, user, game):
+        """
+        Get the preceding and following games for a participant on the same day as the given game.
+        """
+        games_on_same_day = Game.objects.filter(
+            participant__user=user,
+            start_date_and_time__date=game.start_date_and_time.date()
+        ).exclude(game_id=game.game_id).order_by('start_date_and_time')
+
+        preceding_game = get_previous_event(games_on_same_day, game.start_date_and_time)
+        following_game = get_following_event(games_on_same_day, game)
+
+        return preceding_game, following_game
+
+    def _update_conflicts_after_deletion(self, user, preceding_game, following_game):
+        """
+        Updates travel time, available time, and alert between adjacent games.
+        Handles cases where either preceding or following game is None.
+        """
+        if preceding_game and following_game:
+            # Both games exist, handle conflicts between them
+            participant_instance = Participant.objects.get(user=user, game=following_game)
+            self._check_participant_conflict(
+                request=None,
+                participant_instance=participant_instance,
+                preceding_event=preceding_game,
+                following_event=following_game,
+                dry_run=False
+            )
+        elif preceding_game:
+            participant_instance = Participant.objects.get(user=user, game=preceding_game)
+            pre_preceding_current = self._get_adjacent_games(participant_instance.user, preceding_game)
+            pre_preceding = pre_preceding_current[0]
+            self._check_participant_conflict(
+                request=None,
+                participant_instance=participant_instance,
+                preceding_event=pre_preceding,
+                following_event=preceding_game,
+                dry_run=False
+            )
+        elif following_game:
+            # Only the following game exists, no preceding game
+            participant_instance = Participant.objects.get(user=user, game=following_game)
+            # Reset the alert, travel_time, and available_time for this game
+            participant_instance.alert = False
+            participant_instance.travel_time = None
+            participant_instance.time_available = None
+            participant_instance.save()
 
     def handle_category_form(self, request):
         """

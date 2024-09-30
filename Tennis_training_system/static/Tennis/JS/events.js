@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     document.getElementById('back-to-today').addEventListener('click', function() {
-        selectedDate = new Date().toISOString().split('T')[0]; // Reset to today's date
+        selectedDate = new Date().toISOString().split('T')[0];
         loadEvents(selectedDate);
     });
 
@@ -65,13 +65,21 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function resetForm(form) {
     form.reset();
+    const gameIdField = form.querySelector('[name="game_id"]');
+    if (gameIdField) {
+        gameIdField.value = '';
+    }
     const select2Fields = form.querySelectorAll('.django-select2');
-    select2Fields.forEach(field => {
-        $(field).val(null).trigger('change');
-    });
+    if (select2Fields && select2Fields.length > 0) {
+        select2Fields.forEach(field => {
+            $(field).val(null).trigger('change');
+        });
+    }
 }
 
+
 function setOverlayAndFormDisplayNone(form) {
+    resetForm(form)
     form.style.display = 'none';
     overlay.style.display = 'none';
 }
@@ -80,7 +88,6 @@ function handleOutsideClick(form, button) {
     outsideOfForm.addEventListener('click', function hideForm(event) {
         if (!form.contains(event.target) && event.target !== button) {
             setOverlayAndFormDisplayNone(form)
-            resetForm(form);
             outsideOfForm.removeEventListener('click', hideForm);
         }
     });
@@ -185,7 +192,6 @@ function showEventDetails(gameId) {
             'fetch_game_details': 'true'
         },
         success: function(data) {
-
             const modal = document.getElementById('eventDetailsModal');
 
             modal.querySelector('.modal-title').textContent = data.name;
@@ -212,12 +218,17 @@ function showEventDetails(gameId) {
                 editButton.style.display = 'inline-block';
                 deleteButton.style.display = 'inline-block';
 
-                editButton.addEventListener('click', function() {
-                    openEditForm(gameIdData);
+                // Remove previous event listeners from the delete button by cloning it
+                const newDeleteButton = deleteButton.cloneNode(true);
+                deleteButton.parentNode.replaceChild(newDeleteButton, deleteButton);
+
+                // Attach a new event listener to the delete button for the current game
+                newDeleteButton.addEventListener('click', function() {
+                    deleteGame(gameIdData);
                 });
 
-                deleteButton.addEventListener('click', function() {
-                    deleteGame(gameIdData);
+                editButton.addEventListener('click', function() {
+                    openEditForm(gameIdData);
                 });
             } else {
                 editButton.style.display = 'none';
@@ -285,11 +296,22 @@ function openEditForm(gameId) {
         },
         success: function(data) {
             console.log("Game details loaded for editing:", data);
+            console.log("Group data:", data.group);
             form.querySelector('[name="name"]').value = data.name;
             form.querySelector('[name="start_date_and_time"]').value = data.start_date_and_time;
             form.querySelector('[name="end_date_and_time"]').value = data.end_date_and_time;
             form.querySelector('[name="category"]').value = data.category;
             form.querySelector('[name="court"]').value = data.court;
+            if (data.recurrence_type && data.end_date_of_recurrence) {
+                // Set recurrence type
+                form.querySelector('[name="recurrence_type"]').value = data.recurrence_type;
+
+                // Set end date of recurrence
+                form.querySelector('[name="end_date_of_recurrence"]').value = data.end_date_of_recurrence;
+
+                // Show the recurrence end date section if it's hidden
+                document.getElementById('recurrence-end-date').style.display = 'block';
+            }
 
             const participantSelect = form.querySelector('[name="participants"]');
             if (participantSelect) {
@@ -312,6 +334,7 @@ function openEditForm(gameId) {
 
                 $(participantSelect).trigger('change');
             }
+
             form.style.display = 'block';
             overlay.style.display = 'block';
         },
@@ -391,7 +414,7 @@ function toggleForm(form, button, isEdit = false) {
                 handleOutsideClick(form, button)
 
             } else {
-                resetForm(form)
+                setOverlayAndFormDisplayNone(form)
             }
         });
     } else {
@@ -430,7 +453,8 @@ function closeFormWithoutReset(modalId) {
     const modal = document.getElementById(modalId);
 
     if (modal) {
-        setOverlayAndFormDisplayNone(modal)
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
     } else {
         console.error(`Modal with ID ${modal} not found`);
     }
@@ -524,8 +548,8 @@ function handleFormSubmission(form, successMessage, buttonName) {
                             .then(data => {
                                 if (data.success) {
                                     alert('Game added successfully');
-                                    resetForm(form);
                                     loadEvents(selectedDate);
+                                    setOverlayAndFormDisplayNone(form)
                                 }
                             })
                             .catch(error => console.error('Error:', error));
@@ -540,7 +564,13 @@ function handleFormSubmission(form, successMessage, buttonName) {
             } else if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             } else {
-                return response.json();
+                return response.json().then(data => {
+                    if (data.success) {
+                        alert(successMessage);
+                        loadEvents(selectedDate);
+                        setOverlayAndFormDisplayNone(form);
+                    }
+                });
             }
         })
         .catch(error => {
@@ -553,13 +583,16 @@ function handleFormSubmission(form, successMessage, buttonName) {
 handleFormSubmission(document.getElementById('game_form'), 'Game added successfully!', 'submit_game');
 handleFormSubmission(document.getElementById('category_form'), 'Category added successfully!', 'submit_category');
 
+
+// jQuery for Django select2 and recurrence behavior
 (function($) {
     $(document).ready(function() {
         $('.django-select2').djangoSelect2();
 
         $('#id_recurrence_type').change(function() {
             const recurrenceType = $(this).val();
-            if (recurrenceType) {
+
+            if (recurrenceType && recurrenceType !== "None" && recurrenceType !== "") {
                 $('#recurrence-end-date').show();
             } else {
                 $('#recurrence-end-date').hide();
@@ -568,7 +601,7 @@ handleFormSubmission(document.getElementById('category_form'), 'Category added s
         });
 
         const initialRecurrenceType = $('#id_recurrence_type').val();
-        if (initialRecurrenceType) {
+        if (initialRecurrenceType && initialRecurrenceType !== "None" && initialRecurrenceType !== "") {
             $('#recurrence-end-date').show();
         } else {
             $('#recurrence-end-date').hide();
