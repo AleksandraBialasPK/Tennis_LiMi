@@ -1,7 +1,5 @@
-{% extends 'Tennis/baseLoginLogout.html' %}
-{% load static %}
+{% extends 'Tennis/baseLoginRegister.html' %}
 {% load widget_tweaks %}
-
 
 {% block head %}
     <title>Welcome to LiMi - Sign up!</title>
@@ -10,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" 
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css"
           integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
 {% endblock %}
 
@@ -67,5 +65,5 @@
     <a href="{% url 'login' %}" class="login-or-sign-up">Log In</a>
 {% endblock %}
 {% block loginLogout-right-side %}
-    <img  id="dogs-image" src="{% static 'BeFunky-collage.jpg' %}" alt="Happy Shih Tzu (dog)">
+    <img  id="dogs-image" src="{% static 'images/decorative_image_with_correct_background.jpeg' %}" alt="Happy Shih Tzu (dog)">
 {% endblock %}

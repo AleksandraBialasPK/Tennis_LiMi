@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pl">
+{% load static %}
+{% load widget_tweaks %}
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'CSS/courts.css' %}">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/favicon.svg' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link href="{% static 'django_select2/django_select2.css' %}" rel="stylesheet">
+    <script src="{% static 'django_select2/django_select2.js' %}"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/material_green.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <title>{% block title %}Tennis Court System{% endblock %}</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <button class="back-to-dashboard" onclick="window.location.href='{% url 'day' %}'">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <div class="overlay" id="overlay"></div>
+
+    <script src="https://kit.fontawesome.com/7146c5e507.js" crossorigin="anonymous"></script>
+    <script src="{% static 'JS/courts.js' %}"></script>
+</body>
+</html>

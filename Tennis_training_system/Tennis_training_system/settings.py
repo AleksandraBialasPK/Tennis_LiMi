@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
 import logging
 import environ
@@ -156,3 +157,18 @@ ADMIN_URL = env('ADMIN_URL')
 LOGOUT_REDIRECT_URL = env('LOGOUT_REDIRECT_URL')
 LOGIN_URL = env('LOGIN_URL')
 LOGIN_REDIRECT_URL = env('LOGIN_REDIRECT_URL')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}

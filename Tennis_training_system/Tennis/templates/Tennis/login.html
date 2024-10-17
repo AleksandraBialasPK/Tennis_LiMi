@@ -1,16 +1,8 @@
-{% extends 'Tennis/baseLoginLogout.html' %}
-{% load static %}
+{% extends 'Tennis/baseLoginRegister.html' %}
 {% load widget_tweaks %}
 
 {% block head %}
     <title>Welcome to LiMi</title>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="{% static 'CSS/calendarLiMiLoginLogout.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" 
-          integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
 {% endblock %}
 
 {% block loginLogout-left-side %}
@@ -19,7 +11,7 @@
         <div class="login-form-container">
             <div class="input-container">
                 <i class="fas fa-user"></i>
-                {{ form.username|add_class:"login-input" }} 
+                {{ form.username|add_class:"login-input" }}
             </div>
             <div class="input-container">
                 <i class="fas fa-key"></i>
@@ -42,8 +34,4 @@
     {% endif %}
 {% endblock %}
 
-{% block loginLogout-right-side %}
-    <img id="dogs-image"
-         src="{% static 'images/decorative_image_with_correct_background.jpeg' %}"
-         alt="An image of a planner, tennis balls and a tennis racket">
-{% endblock %}
+

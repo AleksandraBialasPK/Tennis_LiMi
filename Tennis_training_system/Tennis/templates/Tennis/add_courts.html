@@ -1,0 +1,33 @@
+{% extends 'Tennis/baseCalendarCourts.html' %}
+
+{% block title %}Add Court{% endblock %}
+
+{% block content %}
+<section class="add-court-section">
+    <form class="new-event-form" id="court_form" method="POST">
+        <span class="close-button" id="closeCourtFormButton">&times;</span>
+        <h2 class="form-h2">Add a new court!</h2>
+        {% csrf_token %}
+        <div class="court-form-fields">
+            {{ form.as_p }}
+        </div>
+        <button type="submit" class="create-or-update-court-button">Add Court</button>
+    </form>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const closeButton = document.getElementById('closeCourtFormButton');
+    const courtForm = document.getElementById('court_form');
+
+    if (closeButton) {
+        closeButton.addEventListener('click', function() {
+            courtForm.style.display = 'none';
+            courtForm.reset();
+
+            window.history.pushState({}, '', "{% url 'courts' %}");
+            window.location.reload();
+        });
+    }
+});
+</script>
+{% endblock %}

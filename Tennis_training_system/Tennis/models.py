@@ -32,12 +32,13 @@ class Role(models.Model):
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
-        """
-        Create and return a regular user with an email and password.
-        """
         if not email:
             raise ValueError('The Email field must be set')
         email = self.normalize_email(email)
+
+        if self.CustomUser.objects.filter(email=email).exists():
+            raise ValueError("A user with this email already exists.")
+
         extra_fields.setdefault('is_active', True)
 
         user = self.model(email=email, **extra_fields)

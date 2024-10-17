@@ -40,6 +40,9 @@ def check_if_enough_time(event_end_time, next_event_start_time, event_court, nex
     time_available = None
     MAPBOX_API_KEY = settings.MAPBOX_API_KEY
 
+    if next_event_start_time > event_end_time:
+        time_available = (next_event_start_time - event_end_time).total_seconds() / 60
+
     if event_court.court_id != next_event_court.court_id:
         travel_time = ask_MapBox_for_travel_time(
             event_court.latitude, event_court.longitude,
@@ -48,8 +51,6 @@ def check_if_enough_time(event_end_time, next_event_start_time, event_court, nex
         )
 
         if travel_time is not None:
-            time_available = (next_event_start_time - event_end_time).total_seconds() / 60
-
             if travel_time > time_available:
                 alert = True
                 if request:

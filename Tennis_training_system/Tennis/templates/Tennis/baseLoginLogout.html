@@ -2,14 +2,26 @@
 <!DOCTYPE html>
 <html lang="pl">
 
-{% block head %}
-{% endblock %}
+<head>
+   <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'CSS/calendarLiMiLoginLogout.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css"
+          integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
+
+    {% block head %}
+    {% endblock %}
+</head>
 
 <body>
     <div class="login-left-side">
         <img class="logo" src="{% static 'images/logo-no-background.svg' %}" alt="LiMi logo">
+
         {% block loginLogout-left-side %}
         {% endblock %}
+
     </div>
     <div class="login-right-side">
          {% block loginLogout-right-side %}
